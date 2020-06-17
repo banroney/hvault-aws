@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AWS Sample App to access Hashicorp Vault using assumed role
+Parameters:
+  VaultAccountId:
+    Description: Please provide the Vault Account Id
+    Type: String
+    Default: 951145066533
+  VaultAddr:
+    Description: Please provide the Vault endpoint
+    Type: String
+    Default: https://ec2-18-204-7-79.compute-1.amazonaws.com:8200
+  VaultNamespace:
+    Description: Please provide the Vault Namespace
+    Type: String
+    Default: etclaims
+  VaultCert:
+    Description: Please provide the Vault SSL Certification Chain location
+    Type: String
+    Default: https://aws-sam-cli-managed-default-samclisourcebucket-9fou2d3kako8.s3.amazonaws.com/certs/vault-cert.pem
+  VaultSkipVerify:
+    Description: Whether to trust un-verified certificates
+    Type: String
+    Default: true
+  VaultRole:
+    Description: Please provide the Role to be assumed by Vault Consumer
+    Type: String
+    Default: Vault_CCRoleDev
+
+Globals:
+  Function:
+    Timeout: 5
+
+Resources:
+  HVaultFunctionIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: HVaultFunctionRole
+      Tags:
+        - Key: 'vault-access'
+          Value: !Ref VaultAccountId
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+              AWS: !Sub
+                - arn:aws:iam::${vaultaccountid}:root
+                - { vaultaccountid: !Ref VaultAccountId}
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: vault_policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: iam:GetRole
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/HVaultFunctionRole'
+              - Effect: Allow
+                Action: sts:GetCallerIdentity
+                Resource: '*'
+
+  HVaultAccessFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: hvault_access/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Environment:
+        Variables:
+          VAULT_ADDR: !Ref VaultAddr
+          VAULT_SERVER_CERT: !Ref VaultCert
+          VAULT_SKIP_VERIFY: !Ref VaultSkipVerify
+          VAULT_NAMESPACE: !Ref VaultNamespace
+          VAULT_ROLE_ARN: !Sub
+            - arn:aws:iam::${vaultaccountid}:role/${vaultrole}
+            - vaultaccountid: !Ref VaultAccountId
+              vaultrole: !Ref VaultRole
+          VAULT_AWS_REGION: !Ref "AWS::Region"
+      FunctionName: HVaultAccessFunction
+      Events:
+        HVaultAccess:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hvault
+            Method: get
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/HVaultFunctionRole'
+Outputs:
+  HVaultAccessApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hashicorp Vault Access"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hvault/"
+  HVaultAccessFunction:
+    Description: "Hashicorp Vault Lambda Function ARN"
+    Value: !GetAtt HVaultAccessFunction.Arn
+  HVaultAccessFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HVaultFunctionIamRole.Arn

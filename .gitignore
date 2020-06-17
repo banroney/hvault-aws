@@ -123,3 +123,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Build containers 
+.DS_Store
+**/.DS_Store
+.vscode
+.idea
