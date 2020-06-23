@@ -304,7 +304,32 @@ The following steps are done for a macOS 10.13 or later. Please do the equivalen
 Windows or Linux. It uses AWS CloudFormation for SAM to deploy the above architecture
 
 **Vault installation**
-This document assumes that Vault 0.12 or higher is already installed in an AWS account. However ,if it is't you can use the Terraform tempate as in [Link](https://github.com/hashicorp/terraform-aws-vault) to install Vault. 
+This document assumes that Vault 0.12 or higher is already installed in an AWS account. However ,if it is't you can use the Terraform tempate as in [Link](https://github.com/hashicorp/terraform-aws-vault) to install Vault. The policy that is used for Vault installation is a combined policy as shown here
+
+```json5
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "iam:GetRole",
+            "Resource": "arn:aws:iam::<your vault account id>:role/Vault*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::*:role/HVault*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/vault-access": "<your vault acccount id>"
+                }
+            }
+        }
+    ]
+}
+```
 
 **Install the following tools** 
 The following method shows installation using HomeBrew. However, other tools like macports or direct
@@ -314,6 +339,7 @@ downloads can also be used. The following tools are needed
  - Docker
  - Git
  - An Installed Hashicorp Vault Enterprise Version 0.12 or above
+ - Postman or newman CLI for postman (for quick configuration of Vault)
 
 ```commandline
 brew tap aws/tap
@@ -400,6 +426,9 @@ sam deploy \
 ```
 ### 1.6.5 Configure Vault
 
+Make sure to replace the variables as shown in the json below in [Link](hvault-setup/hvault_postman_namespace_1.json) and [Link](hvault-setup/hvault_postman_namespace_2.json) with your environment values as shown below. 
+
+
 ````json5
 {
 	"variable": [
@@ -418,13 +447,13 @@ sam deploy \
 		{
 			"id": "7c9fd632-4383-4366-b82f-52314ca3ef1e",
 			"key": "consumer_role_arn",
-			"value": "arn:aws:iam::<insert AWS account id for namespace>:role/HVaultOpt12FunctionRole",
+			"value": "Consumer Role ARN",
 			"type": "string"
 		},
 		{
 			"id": "9b2b0ba8-179b-46db-8d14-21f3392413b9",
 			"key": "local_role_arn",
-			"value": "arn:aws:iam::<insert vault account id>:role/VaultRole_Opt3_CCenter",
+			"value": "Vault Role ARN",
 			"type": "string"
 		},
 		{
@@ -442,14 +471,51 @@ sam deploy \
 		{
 			"id": "04af0373-5740-42d1-9586-9d43a1a69e5c",
 			"key": "vault_token",
-			"value": "s.FjoPtnm6sywkmDdtJEL3Mxyo",
+			"value": "<Your Vault token>",
 			"type": "string"
 		}
 	]
 }
 ````
+Once done, run the following command to configure vault
+
+```commandline
+newman run hvault-setup/hvault_postman_namespace_1.json
+newman run hvault-setup/hvault_postman_namespace_2.json
+```
 
 ### 1.6.6 Testing and Verifying various options
+Follow the steps to test the lambda functions in your AWS accounts
+
+- Login to your AWS Consumer Account 1
+- Switch to the Lambda Function
+- Create 2 test events, one for Option 1 and 2 and another for Option 3. The contents of each of them should be as follows
+  * Option 1/2
+  ```json5
+  {
+    "queryStringParameters": {
+      "vault_path": "dev",
+      "vault_role": "kv_prod",
+      "assumed_role_arn": ""
+    }
+  }
+  ```
+  * Option 3
+  ```json5
+  {
+    "queryStringParameters": {
+      "vault_path": "dev",
+      "vault_role": "kv_prod"
+    }
+  }
+  ```
+  - Switch the Role of the Lambda function to HVaultOption12Role. Test the Lambda against test case Option12 should only work. Test against Option3 should fail
+  - Switch the Role of the Lambda function to HVaultOption3Role. Test the Lambda against test case Option3 should only work. Test against Option12 should fail
+  - Testing with any other combinations should fail.
+  - Note the failures and try to debug the cause of failure.
+  
 
 
 # 2. Hashicorp Vault Sync Secrets Manager
+
+
