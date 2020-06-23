@@ -34,7 +34,38 @@ The following digram demonstrates the flow of the authentication, ticket and the
 | Vault Instance Admin | <ul><li>Create the consumer IAM Role and trust the consumer account </li></ul>| 
 | Vault Namespace Admin |  <ul><li>Add the newly created Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy</li></ul>| 
 
+### Overview
+
+The Vault EC2 Instance uses the following instance profile:
+
+```json5
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::*:role/HVault*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/vault-access": "<your vault AWS account id>"
+                }
+            }
+        }
+    ]
+}
+```
+
 ![Image](/architecture/Vault_architecture-Option-1.svg)
+
+### Pros and Cons
+
+| PROS | CONS | 
+| --------------- | --------------- | 
+| Least effort for consumer application | Heavy maintenance of Vault IAM Roles for consumers |
+| Just need to have the role ARN to assume in order to access Vault | One wild card policy (IAM:GetRole) on VaultRole* in Instance profile |
+ 
 
 
 ## Option 2
