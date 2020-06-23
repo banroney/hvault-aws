@@ -22,7 +22,7 @@ The following are the architecture option overviews
 ## Overall Architecture
 The following digram demonstrates the flow of the authentication, ticket and the usage of the ticket to getch secrets from Vault.
 
-![Image](/architecture/AWS-vault.jpg)
+![Image](/architecture/AWS-vault.svg)
 
 ## Option 1
 
@@ -34,12 +34,12 @@ The following digram demonstrates the flow of the authentication, ticket and the
 | Vault Instance Admin | <ul><li>Create the consumer IAM Role and trust the consumer account </li></ul>| 
 | Vault Namespace Admin |  <ul><li>Add the newly created Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy</li></ul>| 
 
-![Image](/architecture/Vault_architecture-Option-1.jpg)
+![Image](/architecture/Vault_architecture-Option-1.svg)
 
 
 ## Option 2
 
-![Image](/architecture/Vault_architecture-Option-2.jpg)
+![Image](/architecture/Vault_architecture-Option-2.svg)
 
 ***
 
