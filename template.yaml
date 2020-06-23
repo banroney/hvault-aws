@@ -37,7 +37,7 @@ Resources:
   HVaultFunctionIamRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: HVaultFunctionRole
+      RoleName: HVaultOpt12FunctionRole
       Tags:
         - Key: 'vault-access'
           Value: !Ref VaultAccountId
@@ -62,7 +62,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: iam:GetRole
-                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/HVaultFunctionRole'
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/HVaultOpt12FunctionRole'
               - Effect: Allow
                 Action: sts:GetCallerIdentity
                 Resource: '*'

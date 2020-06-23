@@ -28,13 +28,11 @@ The following digram demonstrates the flow of the authentication, ticket and the
 
 ### Roles & Responsibilities
 
-Role | Responsibilities
------------- | -------------
-Consumer | Assume the Vault AWS Role
-         | Add the relevant code to fetch secrets using the corresponding vault role
-Vault Instance Admin | Create the consumer IAM Role and trust the consumer account
-Vault Namespace Admin | Add the newly created Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy
-
+| Roles | Responsibilities | 
+| --------------- | --------------- | 
+| Consumer| <ul><li>Assume the Vault AWS Role</li><li>Add the relevant code to fetch secrets using the corresponding vault role</li></ul> | 
+| Vault Instance Admin | <ul><li>Create the consumer IAM Role and trust the consumer account </li></ul>| 
+| Vault Namespace Admin |  <ul><li>Add the newly created Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy</li></ul>| 
 
 ![Image](/architecture/Vault_architecture-Option-1.jpg)
 
@@ -152,7 +150,8 @@ sam deploy \
 ```
 #### 7. Test and run the configuration
 
-```json
+````json5
+{
 	"variable": [
 		{
 			"id": "2966d27c-cb24-40bf-93a5-6ef1460d2702",
@@ -187,7 +186,7 @@ sam deploy \
 		{
 			"id": "5c1f691e-fade-46ab-8880-279f5c1bc047",
 			"key": "vault_url",
-			"value": "insert yout vault url in the format host:port. Do not include http or https",
+			"value": "insert your vault url in the format host:port. Do not include http or https",
 			"type": "string"
 		},
 		{
@@ -196,5 +195,6 @@ sam deploy \
 			"value": "s.FjoPtnm6sywkmDdtJEL3Mxyo",
 			"type": "string"
 		}
-	],
-```
+	]
+}
+````
