@@ -509,10 +509,10 @@ Follow the steps to test the lambda functions in your AWS accounts
     }
   }
   ```
-  - Switch the Role of the Lambda function to HVaultOption12Role. Test the Lambda against test case Option12 should only work. Test against Option3 should fail
-  - Switch the Role of the Lambda function to HVaultOption3Role. Test the Lambda against test case Option3 should only work. Test against Option12 should fail
-  - Testing with any other combinations should fail.
-  - Note the failures and try to debug the cause of failure.
+- Switch the Role of the Lambda function to HVaultOption12Role. Test the Lambda against test case Option12 should only work. Test against Option3 should fail
+- Switch the Role of the Lambda function to HVaultOption3Role. Test the Lambda against test case Option3 should only work. Test against Option12 should fail
+- Testing with any other combinations should fail.
+- Note the failures and try to debug the cause of failure.
   
 
 
