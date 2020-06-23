@@ -4,17 +4,17 @@ There are 2 modules in this repository, the first one explains the IAM authentic
 
 ## 1. Hashicorp Vault IAM Authentication
 
-### 1.1 Overview
+## 1.1 Overview
 The following blog describes Hashicorp Vault Integration in AWS. It focusses on three methods of accessing secrets in the
 Vault. However the following implementations has a few assumptions as below. All the following options 
 
-#### 1.1.1 Architecture Options
+### 1.1.1 Architecture Options
 The following are the architecture option overviews
  - Option 1: Least Vault Maintenance Overhead
  - Option 2: Strictest Security Policies
  - Option 3: Least Effort for Consumers
  
-#### 1.1.2 Assumptions:
+### 1.1.2 Assumptions:
  - The Vault instance is installed in AWS either in an EC2 instance or a docker container
  - The consumers are prepared only in Lambda
  - The Vault server mandates usage of https
@@ -26,7 +26,7 @@ The following are the architecture option overviews
    AWS account separate from the Vault account.
 
  
-### 1.2 Architecture
+## 1.2 Architecture
 The following diagram demonstrates the flow of the authentication, ticket and the usage of the ticket t
 get secrets from the Vault. The key principle to the Vault not needing the AWS credentials as a part of the 
 configuration is that, the instance or the container running assumes an AWS role that allows the vault to access the 
@@ -48,9 +48,9 @@ document.
 
 ![Image](/architecture/AWS-vault.svg)
 
-### 1.3 Option 1
+## 1.3 Option 1
 
-#### 1.3.1 Overview
+### 1.3.1 Overview
 In this option, the focus is on least effort on the Vault Namespace Administrator. In this method as shown in the picture
 below, the Vault assumes the instance profile and add the trusted roles that can access certain secret areas and associate
 policies with them. However the vault doesn't need to do any change at an AWS account level. 
@@ -63,7 +63,7 @@ The target (consumer) account role has to explicitly trust the Vault account and
 access vault secrets. 
 
 
-#### 1.3.2 AWS Policies
+### 1.3.2 AWS Policies
 
 - The Vault Instance Profile policy
 ```json5
@@ -115,18 +115,18 @@ AssumeRolePolicyDocument:
 ```
 
 
-#### 1.3.3 Roles & Responsibilities
+### 1.3.3 Roles & Responsibilities
 
 | Roles | Responsibilities | 
 | --------------- | --------------- | 
 | Consumer| <ul><li>Attach the vault policy in the Lambda Execution Role</li><li>Add the relevant code to fetch secrets using the vault role (not AWS Role)</li><li>Trust the vault account</li></ul> | 
 | Vault Namespace Admin | <ul><li>Add the Consumer Account in the `/auth/aws/sts/config` path</li><li>Add the Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy</li></ul>| 
 
-#### 1.3.4 Sequence Diagram
+### 1.3.4 Sequence Diagram
 
 ![Image](/architecture/Vault_architecture-Option-1.svg)
 
-#### 1.3.5 Pros and Cons
+### 1.3.5 Pros and Cons
 
 | PROS | CONS | 
 | --------------- | --------------- | 
@@ -134,22 +134,20 @@ AssumeRolePolicyDocument:
 | No Vault Account IAM Maintenance for Consumer ARNs | Consumer needs to add a custom vault policy to access vault secrets to every role.  |
  
 
-### 1.4 Option 2
+## 1.4 Option 2
 
-#### 1.4.1 Overview
-In this option, the focus is on least effort on the Vault Namespace Administrator. In this method as shown in the picture
+### 1.4.1 Overview
+In this option, the focus is on strictest policies and no usage of wild cards. In this method as shown in the picture
 below, the Vault assumes the instance profile and add the trusted roles that can access certain secret areas and associate
-policies with them. However the vault doesn't need to do any change at an AWS account level. 
+policies with them. However the vault doesn't need to do any change at an AWS account level. It is similar in architecture to Option 1.
 
-The Vault EC2 Instance uses the following instance profile as shown below. Note that the Vault is capable if assuming any role in any AWS
-account as long as the target role has a tag `vault-access=vault_aws_account_id`. This is a harmless asterix since, it 
-cannot really assume any role unless the target account explicitly trusts the vault account. 
+The Vault EC2 Instance uses the following instance profile as shown below. As you can see with increasing number of consumers, the policy file size increase exponentially. There is a top limit to the size of the policy file, so thats the upper limit for support. This acts like a permission boundary in case, the vault configuration still allows a role to access certain secrets. This shouls only be used if there are difficulties changing the vault configuration too often. 
 
 The target (consumer) account role has to explicitly trust the Vault account and needs to be use the exact role in order to
-access vault secrets. 
+access vault secrets. AS
 
 
-#### 1.4.2 AWS Policies
+### 1.4.2 AWS Policies
 
 - The Vault Instance Profile policy
 ```json5
@@ -160,18 +158,15 @@ access vault secrets.
             "Sid": "VisualEditor0",
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::*:role/HVault*",
-            "Condition": {
-                "StringEquals": {
-                    "aws:ResourceTag/vault-access": "<your vault AWS account id>"
-                }
-            }
+            "Resource": "<Your consumer account 1 arn>",
+	    "Resource": "<Your consumer account 2 arn>",
+	    "Resource": "<Your consumer account 3 arn>",
         }
     ]
 }
 ```
 
-- The Consumer Lambda Policy that is needed for vault access
+- The Consumer Lambda Policy that is needed for vault access (unchanged from Option 1)
 ```yaml
 - PolicyName: vault_policy
           PolicyDocument:
@@ -184,7 +179,7 @@ access vault secrets.
                 Action: sts:GetCallerIdentity
                 Resource: '*'
 ```
-- The Consumer Lambda Assume Policy Document (Trusting Vault)
+- The Consumer Lambda Assume Policy Document (Trusting Vault) (unchanged from Option 1)
 ```yaml
 AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -201,40 +196,37 @@ AssumeRolePolicyDocument:
 ```
 
 
-#### 1.4.3 Roles & Responsibilities
+### 1.4.3 Roles & Responsibilities
 
 | Roles | Responsibilities | 
 | --------------- | --------------- | 
 | Consumer| <ul><li>Attach the vault policy in the Lambda Execution Role</li><li>Add the relevant code to fetch secrets using the vault role (not AWS Role)</li><li>Trust the vault account</li></ul> | 
 | Vault Namespace Admin | <ul><li>Add the Consumer Account in the `/auth/aws/sts/config` path</li><li>Add the Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy</li></ul>| 
+| Vault Instance Admin | Add the consumer role ARN in the Vault Instance Profile's policy in list of allowed resoruces|
 
-#### 1.4.4 Sequence Diagram
+### 1.4.4 Sequence Diagram
 
 ![Image](/architecture/Vault_architecture-Option-2.svg)
 
-#### 1.4.5 Pros and Cons
+### 1.4.5 Pros and Cons
 
 | PROS | CONS | 
 | --------------- | --------------- | 
-| No Vault Account IAM Change Necessary | Uses wild card in policy |
-| No Vault Account IAM Maintenance for Consumer ARNs | Consumer needs to add a custom vault policy to access vault secrets to every role.  |
+| Strictest Policies (No wild card usage) | Heavy maintenance of Vault instance profiles |
+|  | Consumer needs to add a custom vault policy in all roles that need access to Vault  |
 
-### 1.5 Option 3
+## 1.5 Option 3
 
-#### 1.5.1 Overview
-In this option, the focus is on least effort on the Vault Namespace Administrator. In this method as shown in the picture
-below, the Vault assumes the instance profile and add the trusted roles that can access certain secret areas and associate
-policies with them. However the vault doesn't need to do any change at an AWS account level. 
+### 1.5.1 Overview
+In this option, the focus is on least effort on the consumer. In this method as shown in the picture
+below, the Vault assumes the instance profile and allows access to roles belonging to the Vault AWS account only. Consumer need to assume the Vault AWS role in the Vault account and only then can access the secret. This passes over the control to Vault and as a consumer, all one needs to do is get the role arn to access. The drawback is that, once the role name is known, any program can use it as long as they can assume the role. Vault cannot singularly identify whether the secret was accessed by program A or program B.  
 
-The Vault EC2 Instance uses the following instance profile as shown below. Note that the Vault is capable if assuming any role in any AWS
-account as long as the target role has a tag `vault-access=vault_aws_account_id`. This is a harmless asterix since, it 
-cannot really assume any role unless the target account explicitly trusts the vault account. 
+The Vault EC2 Instance uses the following instance profile as shown below. We shouldnt be using wild card here.
 
-The target (consumer) account role has to explicitly trust the Vault account and needs to be use the exact role in order to
-access vault secrets. 
+The target (consumer) account role has only allow the role to be abel to assume the Vault specified role arn in addition to the standard lambda policies.
 
 
-#### 1.5.2 AWS Policies
+### 1.5.2 AWS Policies
 
 - The Vault Instance Profile policy
 ```json5
@@ -244,74 +236,75 @@ access vault secrets.
         {
             "Sid": "VisualEditor0",
             "Effect": "Allow",
-            "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::*:role/HVault*",
-            "Condition": {
-                "StringEquals": {
-                    "aws:ResourceTag/vault-access": "<your vault AWS account id>"
-                }
-            }
+            "Action": "iam:GetRole",
+            "Resource": "arn:aws:iam::<vault aws account id>:role/HVault*"
         }
     ]
 }
 ```
 
-- The Consumer Lambda Policy that is needed for vault access
-```yaml
-- PolicyName: vault_policy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: iam:GetRole
-                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/HVaultOpt12FunctionRole'
-              - Effect: Allow
-                Action: sts:GetCallerIdentity
-                Resource: '*'
-```
-- The Consumer Lambda Assume Policy Document (Trusting Vault)
+- The Vault Instance Profile Trust Document (Trusting Consumers)
 ```yaml
 AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service:
-                - lambda.amazonaws.com
               AWS: !Sub
-                - arn:aws:iam::${vaultaccountid}:root
-                - { vaultaccountid: !Ref VaultAccountId}
+                - arn:aws:iam::<consumer 1 account id>:root
+		- arn:aws:iam::<consumer 1 account id>:root
             Action:
               - sts:AssumeRole
 ```
 
+- The Consumer Lambda Policy does need to be able to trust the vault role as below
+```json5
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "<Vault role ARN>"
+        }
+    ]
+}
+```
 
-#### 1.5.3 Roles & Responsibilities
+- The Consumer Lambda Assume Policy Document (Trusting Vault)
+
+
+
+### 1.5.3 Roles & Responsibilities
 
 | Roles | Responsibilities | 
 | --------------- | --------------- | 
-| Consumer| <ul><li>Attach the vault policy in the Lambda Execution Role</li><li>Add the relevant code to fetch secrets using the vault role (not AWS Role)</li><li>Trust the vault account</li></ul> | 
-| Vault Namespace Admin | <ul><li>Add the Consumer Account in the `/auth/aws/sts/config` path</li><li>Add the Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy</li></ul>| 
+| Consumer| <ul><li>Assume the Vault AWS role</li><li>Add the relevant code to fetch secrets using the vault role (not AWS Role)</li></ul> | 
+| Vault Namespace Admin | <ul><li>Add the Consumer Role ARN in the `/auth.aws/role` path and bind the vault role/policy</li></ul>| 
+| Vault Instance Admin | Create the consumer IAM Role and trust the consumer account |
 
-#### 1.5.4 Sequence Diagram
+### 1.5.4 Sequence Diagram
 
 ![Image](/architecture/Vault_architecture-Option-3.svg)
 
-#### 1.4.5 Pros and Cons
+### 1.5.5 Pros and Cons
 
 | PROS | CONS | 
 | --------------- | --------------- | 
-| No Vault Account IAM Change Necessary | Uses wild card in policy |
-| No Vault Account IAM Maintenance for Consumer ARNs | Consumer needs to add a custom vault policy to access vault secrets to every role.  |
+| Least effort for consumer| Heavy maintenance for Vault Instance Admin for IAM in AWS Account |
+|  | One wild card policy in the Vault Policy Admin |
 
-### 1.5 Demo
+## 1.6 Demo
 
 The following example demonstrates a Lambda function using 3 different accounts for Option 1, 2 and 3. 
 
-#### 1.5.1 Prequisites 
+### 1.6.1 Prequisites 
 The following steps are done for a macOS 10.13 or later. Please do the equivalent installs if you need to replicate on 
 Windows or Linux. It uses AWS CloudFormation for SAM to deploy the above architecture
 
+**Vault installation**
+This document assumes that Vault 0.12 or higher is already installed in an AWS account. However ,if it is't you can use the Terraform tempate as in [Link](https://github.com/hashicorp/terraform-aws-vault) to install Vault. 
 
 **Install the following tools** 
 The following method shows installation using HomeBrew. However, other tools like macports or direct
@@ -345,11 +338,9 @@ Default output format [None]:
 git clone https://github.com/banroney/hvault-aws.git
 ```
 
-**Steps to follow**
+***Do Steps 1.6.2 to 1.6.6 for 2 AWS accounts, one for each namespace*** 
 
-**Do Steps 1.5.2 to 1.5.5 for 2 AWS accounts, one for each namespace -** 
-
-#### 1.5.2 Build SAM
+### 1.6.2 Build SAM
 Fill out the following before executing the command
   - Replace `project_folder` with the location of the git checked-out folder.
   - Replace AWS_Account_Profile> with the targeted AWS account as per Step 2. 
@@ -364,7 +355,7 @@ sam build \
 ```
 
 
-#### 1.5.3 Package SAM 
+### 1.6.3 Package SAM 
 Provide your S3 bucket name that can be used to upload the built SAM package
  - Replace `<project_folder>` with the location of the git checked-out folder
  - Replace `<S3_bucket_Name>` wih the name of the bucket in the target profile to upload
@@ -381,7 +372,7 @@ sam package \
 ```
 
 
-#### 1.5.4 Deploy SAM
+### 1.6.4 Deploy SAM
 Replace the following before running the command
   - Replace `project_folder` with the location of the git checked-out folder.
   - Replace `<AWS_Account_Profile>` with the targeted AWS account as per Step 2. 
@@ -407,7 +398,7 @@ sam deploy \
        VaultAddr=<Vault_URL> \
        VaultNamespace=<Vault_NameSpace>
 ```
-#### 1.5.5 Configure Vault
+### 1.6.5 Configure Vault
 
 ````json5
 {
@@ -458,7 +449,7 @@ sam deploy \
 }
 ````
 
-#### 1.5.6 Testing and Verifying various options
+### 1.6.6 Testing and Verifying various options
 
 
 # 2. Hashicorp Vault Sync Secrets Manager
