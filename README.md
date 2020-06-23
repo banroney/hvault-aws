@@ -45,7 +45,7 @@ The following digram demonstrates the flow of the authentication, ticket and the
 
 ## Option 3
 
-![Image](/architecture/Vault_architecture-Option-3.jpg)
+![Image](/architecture/Vault_architecture-Option-3.svg)
 
 ***
 
