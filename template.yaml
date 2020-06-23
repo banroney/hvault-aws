@@ -24,10 +24,10 @@ Parameters:
     Description: Whether to trust un-verified certificates
     Type: String
     Default: true
-  VaultRole:
-    Description: Please provide the Role to be assumed by Vault Consumer
+  VaultKvMount:
+    Description: Vault KV Mount Path, defaults to kv
     Type: String
-    Default: Vault_CCRoleDev
+    Default: kv
 
 Globals:
   Function:
@@ -70,7 +70,7 @@ Resources:
   HVaultAccessFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hvault_access/
+      CodeUri: hvault-aws-auth/
       Handler: app.lambda_handler
       Runtime: python3.8
       Environment:
@@ -79,11 +79,8 @@ Resources:
           VAULT_SERVER_CERT: !Ref VaultCert
           VAULT_SKIP_VERIFY: !Ref VaultSkipVerify
           VAULT_NAMESPACE: !Ref VaultNamespace
-          VAULT_ROLE_ARN: !Sub
-            - arn:aws:iam::${vaultaccountid}:role/${vaultrole}
-            - vaultaccountid: !Ref VaultAccountId
-              vaultrole: !Ref VaultRole
           VAULT_AWS_REGION: !Ref "AWS::Region"
+          VAULT_KV_MOUNT: !Ref VaultKvMount
       FunctionName: HVaultAuthFunction
       Events:
         HVaultAccess:

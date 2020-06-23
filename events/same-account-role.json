@@ -1,0 +1,6 @@
+{
+  "queryStringParameters": {
+    "vault_path": "dev",
+    "vault_role": "kv_prod"
+  }
+}

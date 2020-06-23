@@ -27,32 +27,32 @@ def lambda_handler(event, context):
     vault_namespace = os.getenv('VAULT_NAMESPACE')
     vault_bucket = os.getenv('VAULT_BUCKET')
     vault_cert_loc = os.getenv('VAULT_SERVER_CERT')
-    vault_role = os.getenv('VAULT_ROLE_ARN')
+    vault_kv_mount = os.getenv('VAULT_KV_MOUNT')
 
-    path = event["queryStringParameters"]['path']
-    role = event["queryStringParameters"]['role']
+    path = event["queryStringParameters"]['vault_path']
+    vault_role = event["queryStringParameters"]['vault_role']
+    assumed_role = event["queryStringParameters"]['assumed_role']
 
-    #session_assumed = aws_session(role_arn=vault_role, session_name='my_vault_lambda')
-    session_regular = aws_session()
+    session_assumed = aws_session(role_arn=assumed_role, session_name='my_vault_lambda')
 
     client = hvac.Client(url=vault_addr,
                          namespace=vault_namespace,
                          verify=False
                          )
 
-    creds = session_regular.get_credentials().get_frozen_credentials()
+    creds = session_assumed.get_credentials().get_frozen_credentials()
 
     client.auth.aws.iam_login(
         access_key=creds.access_key,
         secret_key=creds.secret_key,
         session_token=creds.token,
-        role=role,
+        role=vault_role,
         use_token=True,
         region=vault_region
     )
 
     secret_version_response = client.secrets.kv.v2.read_secret_version(
-        mount_point='kv',
+        mount_point=vault_kv_mount,
         path=path
     )
 
