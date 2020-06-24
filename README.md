@@ -364,6 +364,8 @@ Default output format [None]:
 git clone https://github.com/banroney/hvault-aws.git
 ```
 
+### 1.6.1 SAM Build,Package and Deploy - Deployment script 
+
 ***Do the following step for 2 AWS accounts, one for each namespace*** 
 
 Just run the following which will in-turn build the project.
@@ -371,18 +373,18 @@ Make sure you fill up all the values in `hvault-setup/template_vals.env` file. A
 
 ```
 #Vault Consumer constants
-VAULT_CONSUMER_AWS_PROFILE=linuxacademy
-VAULT_CONSUMER_AWS_ACCOUNTID=878622267110
+VAULT_CONSUMER_AWS_PROFILE=profile1
+VAULT_CONSUMER_AWS_ACCOUNTID=xxxxxxxxxxx
 VAULT_CONSUMER_AWS_REGION=us-east-1
-VAULT_CONSUMER_AWS_BUCKET=hvault-aws-8786222671102
+VAULT_CONSUMER_AWS_BUCKET=hvault-aws-xxxxxxxxxx
 VAULT_CONSUMER_NAMESPACE=namespace2
-VAULT_CONSUMER_ROLE_ARN=arn:aws:iam::878622267110:role/HVaultOpt12Role
+VAULT_CONSUMER_ROLE_ARN=arn:aws:iam::xxxxxxxxxxx:role/HVaultOpt12Role
 
 #Vault Server constants
-VAULT_SERVICE_AWS_ACCOUNTID=951145066533
-VAULT_SERVICE_URL=ec2-18-204-7-79.compute-1.amazonaws.com:8200
-VAULT_SERVICE_TOKEN=s.FjoPtnm6sywkmDdtJEL3Mxyo
-VAULT_SERVICE_OPTION3_ROLE_ARN=arn:aws:iam::951145066533:role/VaultRole_Opt3_ETClaims
+VAULT_SERVICE_AWS_ACCOUNTID=xxxxxxxxxxxx
+VAULT_SERVICE_URL=vaultserver.com:8200
+VAULT_SERVICE_TOKEN=xxxxxxxxxxxxxxxxxxx
+VAULT_SERVICE_OPTION3_ROLE_ARN=arn:aws:iam::xxxxxxxxxxxxx:role/VaultRole_Opt3
 ```
 Then run this:
 ```commandline
@@ -390,7 +392,7 @@ export PROJECT_ROOT=<your git cloned folder>
 ./hvault-setup/hvault_deploy.sh
 ```
 
-### 1.6.5 Configure Vault
+### 1.6.2 Configure Vault
 
 Run this:
 
@@ -399,14 +401,7 @@ export PROJECT_ROOT=<your git cloned folder>
 ./hvault-setup/hvault_setup.sh
 ```
 
-Once done, run the following command to configure vault
-
-```commandline
-newman run hvault-setup/hvault_postman_namespace_1.json
-newman run hvault-setup/hvault_postman_namespace_2.json
-```
-
-### 1.6.6 Testing and Verifying various options
+### 1.6.3 Testing and Verifying various options
 Follow the steps to test the lambda functions in your AWS accounts
 
 - Login to your AWS Consumer Account 1
