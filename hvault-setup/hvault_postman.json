@@ -615,25 +615,25 @@
 		{
 			"id": "2966d27c-cb24-40bf-93a5-6ef1460d2702",
 			"key": "namespace",
-			"value": "ccenter",
+			"value": "$VAULT_CONSUMER_NAMESPACE",
 			"type": "string"
 		},
 		{
 			"id": "a435036b-5176-45e9-bc29-1e655a575a33",
 			"key": "trust_accountid",
-			"value": "062991626189",
+			"value": "$VAULT_CONSUMER_AWS_ACCOUNTID",
 			"type": "string"
 		},
 		{
 			"id": "7c9fd632-4383-4366-b82f-52314ca3ef1e",
 			"key": "consumer_role_arn",
-			"value": "arn:aws:iam::062991626189:role/HVaultOpt12FunctionRole",
+			"value": "$VAULT_CONSUMER_ROLE_ARN",
 			"type": "string"
 		},
 		{
 			"id": "9b2b0ba8-179b-46db-8d14-21f3392413b9",
 			"key": "local_role_arn",
-			"value": "arn:aws:iam::951145066533:role/VaultRole_Opt3_CCenter",
+			"value": "$VAULT_SERICE_OPTION3_ROLE_ARN",
 			"type": "string"
 		},
 		{
@@ -645,13 +645,13 @@
 		{
 			"id": "5c1f691e-fade-46ab-8880-279f5c1bc047",
 			"key": "vault_url",
-			"value": "ec2-18-204-7-79.compute-1.amazonaws.com:8200",
+			"value": "$VAULT_SERVICE_URL",
 			"type": "string"
 		},
 		{
 			"id": "04af0373-5740-42d1-9586-9d43a1a69e5c",
 			"key": "vault_token",
-			"value": "s.FjoPtnm6sywkmDdtJEL3Mxyo",
+			"value": "$VAULT_SERVICE_TOKEN",
 			"type": "string"
 		}
 	],

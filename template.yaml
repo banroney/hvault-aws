@@ -7,37 +7,56 @@ Parameters:
   VaultAccountId:
     Description: Please provide the Vault Account Id
     Type: String
-    Default: 951145066533
+    Default: vault_account_id
   VaultAddr:
     Description: Please provide the Vault endpoint
     Type: String
-    Default: https://ec2-18-204-7-79.compute-1.amazonaws.com:8200
+    Default: https://vault-hostname:8200
   VaultNamespace:
     Description: Please provide the Vault Namespace
     Type: String
-    Default: etclaims
-  VaultCert:
-    Description: Please provide the Vault SSL Certification Chain location
-    Type: String
-    Default: https://aws-sam-cli-managed-default-samclisourcebucket-9fou2d3kako8.s3.amazonaws.com/certs/vault-cert.pem
-  VaultSkipVerify:
-    Description: Whether to trust un-verified certificates
-    Type: String
-    Default: true
+    Default: nsname
   VaultKvMount:
     Description: Vault KV Mount Path, defaults to kv
     Type: String
     Default: kv
+  VaultOption3RoleArn:
+    Description: Option 3 Vault AWS Role Arn
+    Type: String
+    Default: vault-role-arn
 
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 30
 
 Resources:
-  HVaultFunctionIamRole:
+  HVaultOpt3Role:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: HVaultOpt12FunctionRole
+      RoleName: HVaultOpt3Role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: vault_policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: !Ref VaultOption3RoleArn
+  HVaultOpt12Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: HVaultOpt12Role
       Tags:
         - Key: 'vault-access'
           Value: !Ref VaultAccountId
@@ -76,8 +95,6 @@ Resources:
       Environment:
         Variables:
           VAULT_ADDR: !Ref VaultAddr
-          VAULT_SERVER_CERT: !Ref VaultCert
-          VAULT_SKIP_VERIFY: !Ref VaultSkipVerify
           VAULT_NAMESPACE: !Ref VaultNamespace
           VAULT_AWS_REGION: !Ref "AWS::Region"
           VAULT_KV_MOUNT: !Ref VaultKvMount
@@ -88,14 +105,12 @@ Resources:
           Properties:
             Path: /hvault
             Method: get
-      Role: !GetAtt HVaultFunctionIamRole.Arn
+      Role: !GetAtt HVaultOpt12Role.Arn
 Outputs:
   HVaultAccessApi:
     Description: "API Gateway endpoint URL for Prod stage for Hashicorp Vault Access"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hvault/"
-  HVaultAccessFunction:
-    Description: "Hashicorp Vault Lambda Function ARN"
-    Value: !GetAtt HVaultAccessFunction.Arn
   HVaultAccessFunctionIamRole:
     Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HVaultFunctionIamRole.Arn
+    Value: !Join !GetAtt HVaultOpt12Role.Arn
+

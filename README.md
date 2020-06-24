@@ -369,12 +369,12 @@ git clone https://github.com/banroney/hvault-aws.git
 ### 1.6.2 Build SAM
 Fill out the following before executing the command
   - Replace `project_folder` with the location of the git checked-out folder.
-  - Replace AWS_Account_Profile> with the targeted AWS account as per Step 2. 
+  - Replace `<AWS_Account_Profile>` with the targeted AWS account as per Step 2. 
 
 ```commandline
 cd <project_folder> && \
 sam build \
-    —-profile <AWS_Account_Profile>
+    --profile <AWS_Account_Profile> \
     --template template.yaml \
     --build-dir .aws-sam/build \
     --use-container
@@ -386,12 +386,12 @@ Provide your S3 bucket name that can be used to upload the built SAM package
  - Replace `<project_folder>` with the location of the git checked-out folder
  - Replace `<S3_bucket_Name>` wih the name of the bucket in the target profile to upload
  the built package to.
- - Replace AWS_Account_Profile> with the targeted AWS account as per Step 2. 
+ - Replace `<AWS_Account_Profile>` with the targeted AWS account as per Step 2. 
 
 ```commandline
 cd <project_folder> && \
 sam package \
-    —-profile <AWS_Account_Profile>
+    --profile <AWS_Account_Profile> \
     --template-file .aws-sam/build/template.yaml \
     --output-template-file .aws-sam/build/packaged-template.yaml \
     --s3-bucket <S3_bucket_Name>
@@ -410,23 +410,24 @@ Replace the following before running the command
 
 ```commandline
 cd <project_folder> && \
-sam deploy \
-    —-profile <AWS_Account_Profile>
+ sam deploy \
+    --profile <AWS_Account_Profile> \
+    --region <AWS_Region> \
     --template-file .aws-sam/build/packaged-template.yaml \
     --stack-name hvault-aws \
-    —capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-    --no-execute-changeset \
+    --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+    --confirm-changeset \
     --parameter-overrides \
        VaultAccountId=<Vault_account_id> \
-       VaultCert=<Vault_Chained_Base64_cert> \
        VaultKvMount=kv \
        VaultSkipVerify=true \
-       VaultAddr=<Vault_URL> \
-       VaultNamespace=<Vault_NameSpace>
+       VaultAddr=https://ec2-18-204-7-79.compute-1.amazonaws.com:8200 \
+       VaultNamespace=namespace1 \
+       VaultOption3RoleArn=arn:aws:iam::951145066533:role/VaultRole_Opt3_CCenter
 ```
 ### 1.6.5 Configure Vault
 
-Make sure to replace the variables as shown in the json below in [Link](hvault-setup/hvault_postman_namespace_1.json) and [Link](hvault-setup/hvault_postman_namespace_2.json) with your environment values as shown below. 
+Make sure to replace the variables as shown in the json below in [Link](hvault-setup/hvault_postman.json) and [Link](hvault-setup/hvault_postman_namespace_2.json) with your environment values as shown below. 
 
 
 ````json5

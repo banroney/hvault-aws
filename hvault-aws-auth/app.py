@@ -25,8 +25,6 @@ def lambda_handler(event, context):
     vault_addr = os.environ["VAULT_ADDR"]
     vault_region = os.environ['VAULT_AWS_REGION']
     vault_namespace = os.getenv('VAULT_NAMESPACE')
-    vault_bucket = os.getenv('VAULT_BUCKET')
-    vault_cert_loc = os.getenv('VAULT_SERVER_CERT')
     vault_kv_mount = os.getenv('VAULT_KV_MOUNT')
 
     path = event["queryStringParameters"]['vault_path']
