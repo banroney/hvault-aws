@@ -81,7 +81,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: iam:GetRole
-                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/HVaultOpt12FunctionRole'
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/HVaultOpt12Role'
               - Effect: Allow
                 Action: sts:GetCallerIdentity
                 Resource: '*'
@@ -112,5 +112,5 @@ Outputs:
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hvault/"
   HVaultAccessFunctionIamRole:
     Description: "Implicit IAM Role created for Hello World function"
-    Value: !Join !GetAtt HVaultOpt12Role.Arn
+    Value: !GetAtt HVaultOpt12Role.Arn
 

@@ -1,7 +1,13 @@
 #!/bin/bash
+if [ -z "$PROJECT_ROOT" ]
+then
+      echo "\$PROJECT_ROOT is empty"
+      exit
+fi
+
+echo "cd to $PROJECT_ROOT"
 
 cd $PROJECT_ROOT
-
 
 
 while read -r line; do
@@ -9,6 +15,48 @@ while read -r line; do
     export "$line"
   fi
 done < ./hvault-setup/template_vals.env
+
+if [ -z "$VAULT_CONSUMER_AWS_PROFILE" ]
+then
+      echo "\$VAULT_CONSUMER_AWS_PROFILE is empty"
+      exit
+fi
+
+if [ -z "$VAULT_CONSUMER_AWS_BUCKET" ]
+then
+      echo "\$VAULT_CONSUMER_AWS_BUCKET is empty"
+      exit
+fi
+
+if [ -z "$VAULT_CONSUMER_AWS_REGION" ]
+then
+      echo "\$VAULT_CONSUMER_AWS_REGION is empty"
+      exit
+fi
+
+if [ -z "$VAULT_CONSUMER_AWS_ACCOUNTID" ]
+then
+      echo "\$VAULT_CONSUMER_AWS_ACCOUNTID is empty"
+      exit
+fi
+
+if [ -z "$VAULT_CONSUMER_NAMESPACE" ]
+then
+      echo "\$VAULT_CONSUMER_NAMESPACE is empty"
+      exit
+fi
+
+if [ -z "$VAULT_SERVICE_AWS_ACCOUNTID" ]
+then
+      echo "\$VAULT_SERVICE_AWS_ACCOUNTID is empty"
+      exit
+fi
+
+if [ -z "$VAULT_SERVICE_URL" ]
+then
+      echo "\$VAULT_SERVICE_URL is empty"
+      exit
+fi
 
 echo "$VAULT_CONSUMER_AWS_PROFILE"
 echo "$VAULT_CONSUMER_AWS_BUCKET"
@@ -19,25 +67,29 @@ echo "$VAULT_CONSUMER_ROLE_ARN"
 
 echo "$VAULT_SERVICE_AWS_ACCOUNTID"
 echo "$VAULT_SERVICE_URL"
-echo "$VAULT_SERVICE_TOKEN"
 echo "$VAULT_SERVICE_OPTION3_ROLE_ARN"
 
-aws s3api create-bucket --bucket "$VAULT_CONSUMER_AWS_BUCKET" --region "$VAULT_CONSUMER_AWS_REGION"
+export AWS_PROFILE="$VAULT_CONSUMER_AWS_PROFILE"
+
+aws s3api create-bucket --bucket "$VAULT_CONSUMER_AWS_BUCKET" --region "$VAULT_CONSUMER_AWS_REGION" --profile "$VAULT_CONSUMER_AWS_PROFILE"
 
 echo "Starting SAM Build"
 
+cd $PROJECT_ROOT && \
 sam build \
     --profile "$VAULT_CONSUMER_AWS_PROFILE" \
     --template template.yaml \
     --build-dir .aws-sam/build \
     --use-container
 
+cd $PROJECT_ROOT && \
 sam package \
     --profile "$VAULT_CONSUMER_AWS_PROFILE" \
     --template-file .aws-sam/build/template.yaml \
     --output-template-file .aws-sam/build/packaged-template.yaml \
     --s3-bucket "$VAULT_CONSUMER_AWS_BUCKET"
 
+cd $PROJECT_ROOT && \
 sam deploy \
   --profile "$VAULT_CONSUMER_AWS_PROFILE" \
   --region "$VAULT_CONSUMER_AWS_REGION" \

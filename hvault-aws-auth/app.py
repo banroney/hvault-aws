@@ -22,14 +22,14 @@ def aws_session(role_arn=None, session_name='my_session'):
 
 
 def lambda_handler(event, context):
-    vault_addr = os.environ["VAULT_ADDR"]
+    vault_addr = 'https://' + os.environ["VAULT_ADDR"]
     vault_region = os.environ['VAULT_AWS_REGION']
     vault_namespace = os.getenv('VAULT_NAMESPACE')
     vault_kv_mount = os.getenv('VAULT_KV_MOUNT')
 
     path = event["queryStringParameters"]['vault_path']
     vault_role = event["queryStringParameters"]['vault_role']
-    assumed_role = event["queryStringParameters"]['assumed_role']
+    assumed_role = event["queryStringParameters"]['assumed_role_arn']
 
     session_assumed = aws_session(role_arn=assumed_role, session_name='my_vault_lambda')
 

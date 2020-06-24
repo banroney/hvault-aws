@@ -633,7 +633,7 @@
 		{
 			"id": "9b2b0ba8-179b-46db-8d14-21f3392413b9",
 			"key": "local_role_arn",
-			"value": "$VAULT_SERICE_OPTION3_ROLE_ARN",
+			"value": "$VAULT_SERVICE_OPTION3_ROLE_ARN",
 			"type": "string"
 		},
 		{

@@ -1,7 +1,7 @@
 {
   "queryStringParameters": {
-    "vault_path": "dev",
-    "vault_role": "kv_prod",
+    "vault_path": "opt12",
+    "vault_role": "role_opt12",
     "assumed_role_arn": ""
   }
 }
