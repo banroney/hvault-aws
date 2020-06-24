@@ -299,7 +299,7 @@ AssumeRolePolicyDocument:
 
 The following example demonstrates a Lambda function using 3 different accounts for Option 1, 2 and 3. 
 
-### 1.6.1 Prequisites 
+### 1.6.1 Steps & Prerequisites 
 The following steps are done for a macOS 10.13 or later. Please do the equivalent installs if you need to replicate on 
 Windows or Linux. It uses AWS CloudFormation for SAM to deploy the above architecture
 
@@ -364,128 +364,44 @@ Default output format [None]:
 git clone https://github.com/banroney/hvault-aws.git
 ```
 
-***Do Steps 1.6.2 to 1.6.6 for 2 AWS accounts, one for each namespace*** 
+### 1.6.1 SAM Build,Package and Deploy - Deployment script 
 
-### 1.6.2 Build SAM
-Fill out the following before executing the command
-  - Replace `project_folder` with the location of the git checked-out folder.
-  - Replace `<AWS_Account_Profile>` with the targeted AWS account as per Step 2. 
+***Do the following step for 2 AWS accounts, one for each namespace*** 
 
+Just run the following which will in-turn build the project.
+Make sure you fill up all the values in `hvault-setup/template_vals.env` file. A sample would look like this
+
+```
+#Vault Consumer constants
+VAULT_CONSUMER_AWS_PROFILE=profile1
+VAULT_CONSUMER_AWS_ACCOUNTID=xxxxxxxxxxx
+VAULT_CONSUMER_AWS_REGION=us-east-1
+VAULT_CONSUMER_AWS_BUCKET=hvault-aws-xxxxxxxxxx
+VAULT_CONSUMER_NAMESPACE=namespace2
+VAULT_CONSUMER_ROLE_ARN=arn:aws:iam::xxxxxxxxxxx:role/HVaultOpt12Role
+
+#Vault Server constants
+VAULT_SERVICE_AWS_ACCOUNTID=xxxxxxxxxxxx
+VAULT_SERVICE_URL=vaultserver.com:8200
+VAULT_SERVICE_TOKEN=xxxxxxxxxxxxxxxxxxx
+VAULT_SERVICE_OPTION3_ROLE_ARN=arn:aws:iam::xxxxxxxxxxxxx:role/VaultRole_Opt3
+```
+Then run this:
 ```commandline
-cd <project_folder> && \
-sam build \
-    --profile <AWS_Account_Profile> \
-    --template template.yaml \
-    --build-dir .aws-sam/build \
-    --use-container
+export PROJECT_ROOT=<your git cloned folder>
+./hvault-setup/hvault_deploy.sh
 ```
 
+### 1.6.2 Configure Vault
 
-### 1.6.3 Package SAM 
-Provide your S3 bucket name that can be used to upload the built SAM package
- - Replace `<project_folder>` with the location of the git checked-out folder
- - Replace `<S3_bucket_Name>` wih the name of the bucket in the target profile to upload
- the built package to.
- - Replace `<AWS_Account_Profile>` with the targeted AWS account as per Step 2. 
+Run this:
 
 ```commandline
-cd <project_folder> && \
-sam package \
-    --profile <AWS_Account_Profile> \
-    --template-file .aws-sam/build/template.yaml \
-    --output-template-file .aws-sam/build/packaged-template.yaml \
-    --s3-bucket <S3_bucket_Name>
+export PROJECT_ROOT=<your git cloned folder>
+./hvault-setup/hvault_setup.sh
 ```
 
-
-### 1.6.4 Deploy SAM
-Replace the following before running the command
-  - Replace `project_folder` with the location of the git checked-out folder.
-  - Replace `<AWS_Account_Profile>` with the targeted AWS account as per Step 2. 
-  - In the `parameter-overrides` section, please provide the details as mentioned below. 
-    - Replace `Vault_account_id` with the AWS account ID for Vault. 
-    - Replace `Vault_Chained_Base64_cert` with the Vault Certificate if not trusted
-    - Replace `Vault_URL` with the targeted vault
-    - Replace `Vault_NameSpace` with the targeted Enterprise Vault Namespace
-
-```commandline
-cd <project_folder> && \
- sam deploy \
-    --profile <AWS_Account_Profile> \
-    --region <AWS_Region> \
-    --template-file .aws-sam/build/packaged-template.yaml \
-    --stack-name hvault-aws \
-    --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-    --confirm-changeset \
-    --parameter-overrides \
-       VaultAccountId=<Vault_account_id> \
-       VaultKvMount=kv \
-       VaultSkipVerify=true \
-       VaultAddr=https://ec2-18-204-7-79.compute-1.amazonaws.com:8200 \
-       VaultNamespace=namespace1 \
-       VaultOption3RoleArn=arn:aws:iam::951145066533:role/VaultRole_Opt3_CCenter
-```
-### 1.6.5 Configure Vault
-
-Make sure to replace the variables as shown in the json below in [Link](hvault-setup/hvault_postman.json) and [Link](hvault-setup/hvault_postman_namespace_2.json) with your environment values as shown below. 
-
-
-````json5
-{
-	"variable": [
-		{
-			"id": "2966d27c-cb24-40bf-93a5-6ef1460d2702",
-			"key": "namespace",
-			"value": "<insert your proposed namespace here>",
-			"type": "string"
-		},
-		{
-			"id": "a435036b-5176-45e9-bc29-1e655a575a33",
-			"key": "trust_accountid",
-			"value": "<insert AWS account id for namespace>",
-			"type": "string"
-		},
-		{
-			"id": "7c9fd632-4383-4366-b82f-52314ca3ef1e",
-			"key": "consumer_role_arn",
-			"value": "Consumer Role ARN",
-			"type": "string"
-		},
-		{
-			"id": "9b2b0ba8-179b-46db-8d14-21f3392413b9",
-			"key": "local_role_arn",
-			"value": "Vault Role ARN",
-			"type": "string"
-		},
-		{
-			"id": "9a49dad7-7906-4aa6-86c5-beb7fd905c6a",
-			"key": "vault_role_prefix",
-			"value": "role",
-			"type": "string"
-		},
-		{
-			"id": "5c1f691e-fade-46ab-8880-279f5c1bc047",
-			"key": "vault_url",
-			"value": "insert your vault url in the format host:port. Do not include http or https",
-			"type": "string"
-		},
-		{
-			"id": "04af0373-5740-42d1-9586-9d43a1a69e5c",
-			"key": "vault_token",
-			"value": "<Your Vault token>",
-			"type": "string"
-		}
-	]
-}
-````
-Once done, run the following command to configure vault
-
-```commandline
-newman run hvault-setup/hvault_postman_namespace_1.json
-newman run hvault-setup/hvault_postman_namespace_2.json
-```
-
-### 1.6.6 Testing and Verifying various options
+### 1.6.3 Testing and Verifying various options
 Follow the steps to test the lambda functions in your AWS accounts
 
 - Login to your AWS Consumer Account 1
@@ -495,8 +411,8 @@ Follow the steps to test the lambda functions in your AWS accounts
   ```json5
   {
     "queryStringParameters": {
-      "vault_path": "dev",
-      "vault_role": "kv_prod",
+      "vault_path": "opt12",
+      "vault_role": "role_opt12",
       "assumed_role_arn": ""
     }
   }
@@ -505,8 +421,9 @@ Follow the steps to test the lambda functions in your AWS accounts
   ```json5
   {
     "queryStringParameters": {
-      "vault_path": "dev",
-      "vault_role": "kv_prod"
+      "vault_path": "opt12",
+      "vault_role": "role_opt12",
+      "assumed_role_arn": "your Option 3 Role ARN"
     }
   }
   ```
