@@ -1,0 +1,65 @@
+version: '3.7'
+volumes:
+  dynamodb_data:
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local
+    command: -jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data/
+    ports:
+      - 8000:8000
+    volumes:
+      - ./volumes/data/dynamo:/home/dynamodblocal/data
+  kms-local:
+    container_name: kms-local
+    image: banroney/kms-local
+    volumes:
+      - ./volumes/config:/init
+      - ./volumes/data/secrets:/data
+    ports:
+      - 8080:8080
+  vault:
+    depends_on:
+      - dynamodb-local
+      - kms-local
+    image: library/vault:latest
+    links:
+      - "dynamodb-local"
+      - "kms-local"
+    container_name: vault
+    ports:
+      - 8200:8200
+    restart: always
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./volumes/config/vault.hcl:/vault/config/vault.hcl
+    environment:
+      AWS_ACCESS_KEY_ID: 'XXXXXXXXXXXXXXXXX'
+      AWS_SECRET_ACCESS_KEY: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
+      AWS_DEFAULT_REGION: 'us-east-1'
+      AWS_KMS_ENDPOINT: 'http://kms-local:8080'
+      AWS_DYNAMODB_ENDPOINT: 'http://dynamodb-local:8000'
+      AWS_DYNAMODB_TABLE: 'vault-data'
+      DYNAMODB_HA_ENABLED: 'false'
+      VAULT_AWSKMS_SEAL_KEY_ID: 'bc436485-5092-42b8-92a3-0aa8b93536dc'
+      VAULT_SEAL_TYPE: 'awskms'
+      VAULT_ADDR: 'http://127.0.0.1:8200'
+      VAULT_EXPORT: 'json'
+    entrypoint: 'vault server -config=/vault/config/vault.hcl'
+  vault-initiator:
+    depends_on:
+      - vault
+      - dynamodb-local
+      - kms-local
+    container_name: vault-initiator
+    links:
+      - "dynamodb-local"
+      - "kms-local"
+      - "vault"
+    environment:
+      VAULT_ADDR: 'http://vault:8200'
+      VAULT_FORMAT: 'json'
+    build:
+      context: .
+      dockerfile: Dockerfile

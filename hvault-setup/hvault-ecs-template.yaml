@@ -1,0 +1,343 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Hashicorp Vault Container with DynamoDB Backend'
+Parameters:
+  ImageTag:
+    Type: String
+    Description: Docker Repository Image URL
+  EndpointCertificate:
+    Type: String
+    Description: Type in the Certificate ARN that you intend to use
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Select a VPC that has at least one subnet with access to internet and another with access from internet.
+  ECSSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two private subnets in your selected VPC for the Containers.
+  ALBSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at two public subnets in your selected VPC, same zones as the private subnets.
+  DesiredCapacity:
+    Type: Number
+    Default: '2'
+    Description: Number of instances to launch in your ECS cluster.
+  MaxSize:
+    Type: Number
+    Default: '4'
+    Description: Maximum number of instances that can be launched in your ECS cluster.
+  HAEnabled:
+    Description: Set to true to enable ad false to disable HA for DynamoDB
+    Type: String
+    Default: 'true'
+Resources:
+  HVaultECSCluster:
+    Type: AWS::ECS::Cluster
+  HVaultALBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Security Group
+      VpcId: !Ref 'VpcId'
+  HvaultALBSGHTTPSInbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'HVaultALBSG'
+      IpProtocol: tcp
+      FromPort: '443'
+      ToPort: '443'
+      CidrIp: 0.0.0.0/0
+  HVaultECSSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Security Group
+      VpcId: !Ref 'VpcId'
+  HVaultECSSGContainerInbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'HVaultECSSG'
+      IpProtocol: tcp
+      FromPort: '8200'
+      ToPort: '8200'
+      SourceSecurityGroupId: !GetAtt HVaultALBSG.GroupId
+  HVaultCloudwatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['-', [ECSLogGroup, !Ref 'AWS::StackName']]
+      RetentionInDays: 3
+  HVaultECSTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities:
+        - "FARGATE"
+      Family: !Join ['', [!Ref 'AWS::StackName', -clamav-svc]]
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !GetAtt HVaultECSExecServiceRole.Arn
+      TaskRoleArn: !GetAtt HVaultECSTaskServiceRole.Arn
+      Cpu: '1024'
+      Memory: '2048'
+      ContainerDefinitions:
+      - Name: hvault-svc
+        Essential: 'true'
+        Image: !Ref ImageTag
+        LinuxParameters:
+          Capabilities:
+            Add:
+              - "IPC_LOCK"
+        Environment:
+          - Name: "AWS_DYNAMODB_TABLE"
+            Value: !Ref HVaultTable
+          - Name: "DYNAMODB_HA_ENABLED"
+            Value: !Ref HAEnabled
+          - Name: "VAULT_SEAL_TYPE"
+            Value: "true"
+          - Name: "VAULT_AWSKMS_SEAL_KEY_ID"
+            Value: !Ref HVaultKmsAutoUnsealKey
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref 'HVaultCloudwatchLogsGroup'
+            awslogs-region: !Ref 'AWS::Region'
+            awslogs-stream-prefix: clamav-svc
+        PortMappings:
+        - ContainerPort: 9000
+  HVaultALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '30'
+      Subnets: !Ref 'ALBSubnetIds'
+      SecurityGroups: [!Ref 'HVaultALBSG']
+  HVaultALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+      - HVaultECSTaskServiceRole
+      - HVaultECSExecServiceRole
+    Properties:
+      Certificates:
+        -
+          CertificateArn: !Ref 'EndpointCertificate'
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'HVaultALBTargetGroup'
+      LoadBalancerArn: !Ref
+      Port: '443'
+      Protocol: HTTPS
+  HVaultALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    DependsOn: HVaultALBListener
+    Properties:
+      Actions:
+      - Type: forward
+        TargetGroupArn: !Ref 'HVaultALBTargetGroup'
+      Conditions:
+      - Field: path-pattern
+        Values: [/]
+      ListenerArn: !Ref 'HVaultALBListener'
+      Priority: 1
+  HVaultServerListenerRedirectToHTTPS:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: "443"
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
+      LoadBalancerArn: !Ref HVaultALB
+      Port: 80
+      Protocol: "HTTP"
+  HVaultALBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: 'HVaultALB'
+    Properties:
+      VpcId: !Ref VpcId
+      Port: 8200
+      Protocol: HTTP
+      Matcher:
+        HttpCode: 200-499
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /v1/sys/health?activecode=200&standbycode=200&sealedcode=200&uninitcode=200
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+  HVaultECSService:
+    Type: AWS::ECS::Service
+    DependsOn: HVaultALBListener
+    Properties:
+      Cluster: !Ref 'HVaultECSCluster'
+      DesiredCount: '1'
+      LaunchType: 'FARGATE'
+      LoadBalancers:
+        - ContainerName: clamav-svc
+          ContainerPort: '9000'
+          TargetGroupArn: !Ref 'HVaultALBTargetGroup'
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: 'DISABLED'
+          SecurityGroups:
+            - !Ref 'HVaultECSSG'
+          Subnets: !Ref 'ECSSubnetIds'
+      ServiceName: 'clamav-service'
+      TaskDefinition: !Ref 'HVaultECSTask'
+  HVaultTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "Path"
+          AttributeType: "S"
+        - AttributeName: "Key"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "Path"
+          KeyType: "HASH"
+        - AttributeName: "Key"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+      TableName: hvault-data
+      Tags:
+        - Name: "vault-dynamodb-table"
+          Value: "research"
+  HVaultSealKeys:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: ClamHmacSecret
+      Description: "This secret has a dynamically generated HMAC key."
+      GenerateSecretString:
+        SecretStringTemplate: '{"clamavkey": "test-key"}'
+        GenerateStringKey: "clamavkey"
+        PasswordLength: 30
+        ExcludeCharacters: '"@/\'
+      Tags:
+        - Key: AppName
+          Value: ClamAVScanner
+  HVaultKmsAutoUnsealKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "Vault Seal/Unseal key"
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: '*'
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt HVaultECSExecServiceRole.Arn
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Resource: '*'
+          - Sid: Allow use of the key
+            Effect: Allow
+            Principal:
+              # If the Lambda Functions need to use this key we must add their execution roles here as principles
+              AWS:
+            Action:
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey
+              - kms:GenerateDataKeyWithoutPlaintext
+            Resource: '*'
+  HVaultSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: "VaultSecret"
+      Description: "Vault Root/Recovery key"
+      KmsKeyId: !Ref HVaultKmsAutoUnsealKey
+      SecretString: "empty"
+  HVaultECSExecServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com,ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: clamav-svc-db
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  [
+                    "dynamodb:DescribeLimits",
+                    "dynamodb:DescribeTimeToLive",
+                    "dynamodb:ListTagsOfResource",
+                    "dynamodb:DescribeReservedCapacityOfferings",
+                    "dynamodb:DescribeReservedCapacity",
+                    "dynamodb:ListTables",
+                    "dynamodb:BatchGetItem",
+                    "dynamodb:BatchWriteItem",
+                    "dynamodb:CreateTable",
+                    "dynamodb:DeleteItem",
+                    "dynamodb:GetItem",
+                    "dynamodb:GetRecords",
+                    "dynamodb:PutItem",
+                    "dynamodb:Query",
+                    "dynamodb:UpdateItem",
+                    "dynamodb:Scan",
+                    "dynamodb:DescribeTable"
+                  ]
+                Resource: !GetAtt HVaultTable.Arn
+        - PolicyName: clamav-svc-secret
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: 'secretsmanager:GetSecretValue'
+                Resource: !Ref HVaultSealKeys
+  HVaultECSTaskServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ecs-tasks.amazonaws.com,ecs.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: clamav-svc-ecs
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: ['elasticloadbalancing:DeregisterTargets',
+                         'elasticloadbalancing:Describe*',
+                         'elasticloadbalancing:RegisterTargets']
+                Resource: '*'
+
+Outputs:
+  HVaultECSService:
+    Value: !Ref 'HVaultECSService'
+  HVaultECSCluster:
+    Value: !Ref 'HVaultECSCluster'
+  HVaultECSEndpoint:
+    Description: Your ALB DNS URL
+    Value: !Join ['', [!GetAtt [HVaultALB, DNSName]]]
+  HVaultECSTaskDefinition:
+    Value: !Ref 'HVaultECSTask'
