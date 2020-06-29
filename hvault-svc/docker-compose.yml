@@ -12,29 +12,31 @@ services:
       - ./volumes/data/dynamo:/home/dynamodblocal/data
   kms-local:
     container_name: kms-local
-    image: banroney/kms-local
+    image: nsmithuk/local-kms
     volumes:
-      - ./volumes/config:/init
+      - ./config:/init
       - ./volumes/data/secrets:/data
     ports:
       - 8080:8080
-  vault:
+  hvault:
     depends_on:
       - dynamodb-local
       - kms-local
-    image: library/vault:latest
+    image: vault:latest
     links:
       - "dynamodb-local"
       - "kms-local"
-    container_name: vault
+    container_name: hvault
     ports:
       - 8200:8200
-    restart: always
-    cap_add:
-      - IPC_LOCK
-    volumes:
-      - ./volumes/config/vault.hcl:/vault/config/vault.hcl
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
     environment:
+      VAULT_ADDR: 'http://127.0.0.1:8200/'
       AWS_ACCESS_KEY_ID: 'XXXXXXXXXXXXXXXXX'
       AWS_SECRET_ACCESS_KEY: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
       AWS_DEFAULT_REGION: 'us-east-1'
@@ -44,22 +46,31 @@ services:
       DYNAMODB_HA_ENABLED: 'false'
       VAULT_AWSKMS_SEAL_KEY_ID: 'bc436485-5092-42b8-92a3-0aa8b93536dc'
       VAULT_SEAL_TYPE: 'awskms'
-      VAULT_ADDR: 'http://127.0.0.1:8200'
-      VAULT_EXPORT: 'json'
-    entrypoint: 'vault server -config=/vault/config/vault.hcl'
+      SKIP_SETCAP: 'true'
+      VAULT_LOCAL_CONFIG: '{"storage":{"dynamodb":{}},"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":1}},"ui":true,"disable_mlock":true}'
+    command: 'server'
   vault-initiator:
     depends_on:
-      - vault
+      - hvault
       - dynamodb-local
       - kms-local
     container_name: vault-initiator
     links:
       - "dynamodb-local"
       - "kms-local"
-      - "vault"
+      - "hvault"
     environment:
-      VAULT_ADDR: 'http://vault:8200'
+      AWS_ACCESS_KEY_ID: ''
+      AWS_SECRET_ACCESS_KEY: ''
+      AWS_DEFAULT_REGION: 'us-east-1'
+      VAULT_ADDR: 'https://hvault-06202029-864459959.us-east-1.elb.amazonaws.com'
       VAULT_FORMAT: 'json'
+      VAULT_SECRETS_S: '10'
+      VAULT_SECRETS_T: '3'
+      VAULT_RECOVERY_S: '10'
+      VAULT_RECOVERY_T: '3'
+      AWS_SM_RECOVERY_KEYS: 'local_hvault_recovery_keys'
+      AWS_SM_ROOT_TOKEN: 'local_hvault_root_token'
     build:
       context: .
       dockerfile: Dockerfile

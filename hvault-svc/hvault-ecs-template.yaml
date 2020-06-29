@@ -50,6 +50,9 @@ Parameters:
     Description: Set to true to enable ad false to disable HA for DynamoDB
     Type: String
     Default: 'true'
+  DNSEndpoint:
+    Description: Set the DNS Name of the endpoint. This must be unique
+    Type: String
 Resources:
   HVaultECSCluster:
     Type: AWS::ECS::Cluster
@@ -89,7 +92,7 @@ Resources:
     Properties:
       RequiresCompatibilities:
         - "FARGATE"
-      Family: !Join ['', [!Ref 'AWS::StackName', -clamav-svc]]
+      Family: !Join ['', [!Ref 'AWS::StackName', -task]]
       NetworkMode: awsvpc
       ExecutionRoleArn: !GetAtt HVaultECSExecServiceRole.Arn
       TaskRoleArn: !GetAtt HVaultECSTaskServiceRole.Arn
@@ -105,13 +108,17 @@ Resources:
           - Name: "DYNAMODB_HA_ENABLED"
             Value: !Ref HAEnabled
           - Name: "VAULT_SEAL_TYPE"
-            Value: "true"
+            Value: "awskms"
           - Name: "VAULT_AWSKMS_SEAL_KEY_ID"
             Value: !Ref HVaultKmsAutoUnsealKey
           - Name: "VAULT_LOCAL_CONFIG"
-            Value: '{"storage":{"dynamodb":{}},"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":1}},"ui":true,"disable_mlock":true}'
+            Value: "{\"storage\":{\"dynamodb\":{}},\"listener\":{\"tcp\":{\"address\":\"0.0.0.0:8200\",\"tls_disable\":1}},\"ui\":true,\"disable_mlock\":true}"
           - Name: "SKIP_SETCAP"
             Value: "true"
+          - Name: "VAULT_API_ADDR"
+            Value: !Sub
+              - https://${hvaultalbendpoint}
+              - { hvaultalbendpoint: !GetAtt HVaultALB.DNSName}
         LogConfiguration:
           LogDriver: awslogs
           Options:
@@ -120,7 +127,7 @@ Resources:
             awslogs-stream-prefix: hvault-svc
         PortMappings:
         - ContainerPort: 8200
-        Command: ['vault server -config /vault/config/local.json']
+        Command: ['server']
       - Name: hvault-setup
         Essential: false
         DependsOn:
@@ -129,7 +136,9 @@ Resources:
         Image: !Ref VaultInitiatorImageTag
         Environment:
           - Name: "VAULT_ADDR"
-            Value: !Join ['https://', [!GetAtt [HVaultALB, DNSName]]]
+            Value: !Sub
+              - https://${hvaultalbendpoint}
+              - { hvaultalbendpoint: !GetAtt HVaultALB.DNSName}
             #Value: 'http://hvault-svc:8200'
           - Name: "VAULT_SECRETS_S"
             Value: !Ref VaultSecretsStore
@@ -152,6 +161,7 @@ Resources:
   HVaultALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      Name: !Ref DNSEndpoint
       Scheme: internet-facing
       LoadBalancerAttributes:
       - Key: idle_timeout.timeout_seconds
@@ -206,6 +216,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     DependsOn: HVaultALB
     Properties:
+      TargetType: 'ip'
       VpcId: !Ref VpcId
       Port: 8200
       Protocol: HTTP
@@ -221,7 +232,7 @@ Resources:
     DependsOn: HVaultALBListener
     Properties:
       Cluster: !Ref 'HVaultECSCluster'
-      DesiredCount: '1'
+      DesiredCount: !Ref DesiredCapacity
       LaunchType: 'FARGATE'
       LoadBalancers:
         - ContainerName: hvault-svc
@@ -288,7 +299,9 @@ Resources:
             Effect: Allow
             Principal:
               # If the Lambda Functions need to use this key we must add their execution roles here as principles
-              AWS: !GetAtt HVaultECSExecServiceRole.Arn
+              AWS:
+                - !GetAtt HVaultECSExecServiceRole.Arn
+                - !GetAtt HVaultECSTaskServiceRole.Arn
             Action:
               - kms:DescribeKey
               - kms:Encrypt
@@ -375,6 +388,32 @@ Resources:
                          'elasticloadbalancing:Describe*',
                          'elasticloadbalancing:RegisterTargets']
                 Resource: '*'
+        - PolicyName: hvault-svc-db
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  [
+                    "dynamodb:DescribeLimits",
+                    "dynamodb:DescribeTimeToLive",
+                    "dynamodb:ListTagsOfResource",
+                    "dynamodb:DescribeReservedCapacityOfferings",
+                    "dynamodb:DescribeReservedCapacity",
+                    "dynamodb:ListTables",
+                    "dynamodb:BatchGetItem",
+                    "dynamodb:BatchWriteItem",
+                    "dynamodb:CreateTable",
+                    "dynamodb:DeleteItem",
+                    "dynamodb:GetItem",
+                    "dynamodb:GetRecords",
+                    "dynamodb:PutItem",
+                    "dynamodb:Query",
+                    "dynamodb:UpdateItem",
+                    "dynamodb:Scan",
+                    "dynamodb:DescribeTable"
+                  ]
+                Resource: !GetAtt HVaultTable.Arn
+
 
 Outputs:
   HVaultECSService:
