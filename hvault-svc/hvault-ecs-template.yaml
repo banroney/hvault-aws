@@ -50,9 +50,6 @@ Parameters:
     Description: Set to true to enable ad false to disable HA for DynamoDB
     Type: String
     Default: 'true'
-  DNSEndpoint:
-    Description: Set the DNS Name of the endpoint. This must be unique
-    Type: String
 Resources:
   HVaultECSCluster:
     Type: AWS::ECS::Cluster
@@ -68,6 +65,14 @@ Resources:
       IpProtocol: tcp
       FromPort: '443'
       ToPort: '443'
+      CidrIp: 0.0.0.0/0
+  HvaultALBSGHTTPInbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref HVaultALBSG
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
       CidrIp: 0.0.0.0/0
   HVaultECSSG:
     Type: AWS::EC2::SecurityGroup
@@ -136,10 +141,10 @@ Resources:
         Image: !Ref VaultInitiatorImageTag
         Environment:
           - Name: "VAULT_ADDR"
-            Value: !Sub
-              - https://${hvaultalbendpoint}
-              - { hvaultalbendpoint: !GetAtt HVaultALB.DNSName}
-            #Value: 'http://hvault-svc:8200'
+#            Value: !Sub
+#              - https://${hvaultalbendpoint}
+#              - { hvaultalbendpoint: !GetAtt HVaultALB.DNSName}
+            Value: "http://localhost:8200"
           - Name: "VAULT_SECRETS_S"
             Value: !Ref VaultSecretsStore
           - Name: "VAULT_SECRETS_T"
@@ -161,7 +166,6 @@ Resources:
   HVaultALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: !Ref DNSEndpoint
       Scheme: internet-facing
       LoadBalancerAttributes:
       - Key: idle_timeout.timeout_seconds
@@ -360,15 +364,18 @@ Resources:
                     "dynamodb:DescribeTable"
                   ]
                 Resource: !GetAtt HVaultTable.Arn
-        - PolicyName: hvault-svc-secrets
+        - PolicyName: hvault-svc-aws
           PolicyDocument:
             Statement:
               - Effect: Allow
-                Action: ['secretsmanager:UpdateSecret']
-                Resource: [
-                  !Ref 'HVaultRecoveryKey',
-                  !Ref 'HVaultRootKey'
-                ]
+                Action: iam:GetRole
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/Vault*"
+              - Effect: Allow
+                Action: sts:AssumeRole
+                Resource: arn:aws:iam::*:role/HVault*
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/vault-access: !Sub "${AWS::AccountId}"
   HVaultECSTaskServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -413,7 +420,15 @@ Resources:
                     "dynamodb:DescribeTable"
                   ]
                 Resource: !GetAtt HVaultTable.Arn
-
+        - PolicyName: hvault-svc-secrets
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: ['secretsmanager:UpdateSecret']
+                Resource: [
+                    !Ref 'HVaultRecoveryKey',
+                    !Ref 'HVaultRootKey'
+                  ]
 
 Outputs:
   HVaultECSService:

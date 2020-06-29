@@ -52,25 +52,23 @@ services:
   vault-initiator:
     depends_on:
       - hvault
-      - dynamodb-local
-      - kms-local
     container_name: vault-initiator
     links:
       - "dynamodb-local"
       - "kms-local"
       - "hvault"
+    volumes:
+      - ~/.aws/:/root/.aws:ro
     environment:
-      AWS_ACCESS_KEY_ID: ''
-      AWS_SECRET_ACCESS_KEY: ''
       AWS_DEFAULT_REGION: 'us-east-1'
-      VAULT_ADDR: 'https://hvault-06202029-864459959.us-east-1.elb.amazonaws.com'
+      VAULT_ADDR: 'http://hvault:8200'
       VAULT_FORMAT: 'json'
       VAULT_SECRETS_S: '10'
       VAULT_SECRETS_T: '3'
       VAULT_RECOVERY_S: '10'
       VAULT_RECOVERY_T: '3'
-      AWS_SM_RECOVERY_KEYS: 'local_hvault_recovery_keys'
-      AWS_SM_ROOT_TOKEN: 'local_hvault_root_token'
+      AWS_SM_RECOVERY_KEYS: 'arn:aws:secretsmanager:us-east-1:951145066533:secret:hvault-recovery-key-HLlvz5'
+      AWS_SM_ROOT_TOKEN: 'arn:aws:secretsmanager:us-east-1:951145066533:secret:hvault-root-key-1TbDQc'
     build:
       context: .
       dockerfile: Dockerfile
