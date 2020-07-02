@@ -2,31 +2,31 @@ version: '3.7'
 volumes:
   dynamodb_data:
 services:
-  dynamodb-local:
+  hvault-dynamodb-local:
     image: amazon/dynamodb-local:latest
-    container_name: dynamodb-local
+    container_name: hvault-dynamodb-local
     command: -jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data/
     ports:
       - 8000:8000
     volumes:
-      - ./volumes/data/dynamo:/home/dynamodblocal/data
-  kms-local:
-    container_name: kms-local
+      - ./local-data/dynamo:/home/dynamodblocal/data
+  hvault-kms-local:
+    container_name: hvault-kms-local
     image: nsmithuk/local-kms
     volumes:
       - ./config:/init
-      - ./volumes/data/secrets:/data
+      - ./local-data/secrets:/data
     ports:
       - 8080:8080
-  hvault:
+  hvault-svc-local:
     depends_on:
-      - dynamodb-local
-      - kms-local
+      - hvault-dynamodb-local
+      - hvault-kms-local
     image: vault:latest
     links:
-      - "dynamodb-local"
-      - "kms-local"
-    container_name: hvault
+      - "hvault-dynamodb-local"
+      - "hvault-kms-local"
+    container_name: hvault-svc-local
     ports:
       - 8200:8200
     healthcheck:
@@ -40,8 +40,8 @@ services:
       AWS_ACCESS_KEY_ID: 'XXXXXXXXXXXXXXXXX'
       AWS_SECRET_ACCESS_KEY: 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
       AWS_DEFAULT_REGION: 'us-east-1'
-      AWS_KMS_ENDPOINT: 'http://kms-local:8080'
-      AWS_DYNAMODB_ENDPOINT: 'http://dynamodb-local:8000'
+      AWS_KMS_ENDPOINT: 'http://hvault-kms-local:8080'
+      AWS_DYNAMODB_ENDPOINT: 'http://hvault-dynamodb-local:8000'
       AWS_DYNAMODB_TABLE: 'vault-data'
       DYNAMODB_HA_ENABLED: 'false'
       VAULT_AWSKMS_SEAL_KEY_ID: 'bc436485-5092-42b8-92a3-0aa8b93536dc'
@@ -49,26 +49,27 @@ services:
       SKIP_SETCAP: 'true'
       VAULT_LOCAL_CONFIG: '{"storage":{"dynamodb":{}},"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":1}},"ui":true,"disable_mlock":true}'
     command: 'server'
-  vault-initiator:
+  hvault-client-local:
     depends_on:
-      - hvault
-    container_name: vault-initiator
+      - hvault-svc-local
+    build:
+      context: hvault-client-local
+      dockerfile: Dockerfile
+    container_name: hvault-client-local
     links:
-      - "dynamodb-local"
-      - "kms-local"
-      - "hvault"
+      - "hvault-dynamodb-local"
+      - "hvault-kms-local"
+      - "hvault-svc-local"
     volumes:
       - ~/.aws/:/root/.aws:ro
     environment:
       AWS_DEFAULT_REGION: 'us-east-1'
-      VAULT_ADDR: 'http://hvault:8200'
+      VAULT_ADDR: 'http://hvault-svc-local:8200'
       VAULT_FORMAT: 'json'
       VAULT_SECRETS_S: '10'
       VAULT_SECRETS_T: '3'
       VAULT_RECOVERY_S: '10'
       VAULT_RECOVERY_T: '3'
+      PRINT_TOKENS: 'true' #Setting this will print out the root token in the logs. So be careful
       AWS_SM_RECOVERY_KEYS: 'arn:aws:secretsmanager:us-east-1:951145066533:secret:hvault-recovery-key-HLlvz5'
       AWS_SM_ROOT_TOKEN: 'arn:aws:secretsmanager:us-east-1:951145066533:secret:hvault-root-key-1TbDQc'
-    build:
-      context: .
-      dockerfile: Dockerfile

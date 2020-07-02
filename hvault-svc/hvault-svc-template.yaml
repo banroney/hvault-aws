@@ -50,6 +50,33 @@ Parameters:
     Description: Set to true to enable ad false to disable HA for DynamoDB
     Type: String
     Default: 'true'
+  VaultOption3RolePrefix:
+    Description: Set the prefix of HVaultTrusted Roles
+    Type: String
+    Default: 'HVaultRoleOption3'
+  VaultConsumerNamespace1:
+    Description: Set the name of a Vault consumer namespace 1
+    Type: String
+    Default: 'ns1'
+  VaultConsumerNamespace2:
+    Description: Set the name of a Vault consumer namespace 2
+    Type: String
+    Default: 'ns2'
+  VaultAWSAccountID1:
+    Description: Set the AWS account ID for a vault consumer 1
+    Type: String
+  VaultAWSAccountID2:
+    Description: Set the AWS account ID for a vault consumer 2
+    Type: String
+
+Conditions:
+  IsConsumer1Available: !And
+    - !Not [!Equals ["",!Ref VaultConsumerNamespace1]]
+    - !Not [!Equals ["",!Ref VaultAWSAccountID1]]
+  IsConsumer2Available: !And
+    - !Not [!Equals ["",!Ref VaultConsumerNamespace1]]
+    - !Not [!Equals ["",!Ref VaultAWSAccountID1]]
+
 Resources:
   HVaultECSCluster:
     Type: AWS::ECS::Cluster
@@ -101,8 +128,8 @@ Resources:
       NetworkMode: awsvpc
       ExecutionRoleArn: !GetAtt HVaultECSExecServiceRole.Arn
       TaskRoleArn: !GetAtt HVaultECSTaskServiceRole.Arn
-      Cpu: '1024'
-      Memory: '2048'
+      Cpu: '2048'
+      Memory: '4096'
       ContainerDefinitions:
       - Name: hvault-svc
         Essential: 'true'
@@ -141,9 +168,6 @@ Resources:
         Image: !Ref VaultInitiatorImageTag
         Environment:
           - Name: "VAULT_ADDR"
-#            Value: !Sub
-#              - https://${hvaultalbendpoint}
-#              - { hvaultalbendpoint: !GetAtt HVaultALB.DNSName}
             Value: "http://localhost:8200"
           - Name: "VAULT_SECRETS_S"
             Value: !Ref VaultSecretsStore
@@ -369,7 +393,9 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: iam:GetRole
-                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/Vault*"
+                Resource: !Sub
+                  - arn:aws:iam::${AWS::AccountId}:role/{role_prefix}*
+                  - role_prefix: !Ref VaultOption3RolePrefix
               - Effect: Allow
                 Action: sts:AssumeRole
                 Resource: arn:aws:iam::*:role/HVault*
@@ -429,14 +455,61 @@ Resources:
                     !Ref 'HVaultRecoveryKey',
                     !Ref 'HVaultRootKey'
                   ]
+  HVaultOption3RoleNameSpace1:
+    Type: AWS::IAM::Role
+    Condition: IsConsumer1Available
+    Properties:
+      RoleName: !Sub
+        - ${role_prefix}_${namespace}
+        - role_prefix: !Ref VaultOption3RolePrefix
+          namespace: !Ref VaultConsumerNamespace1
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${consumer_account}:root
+                - consumer_account: !Ref VaultAWSAccountID1
+            Action:
+              - sts:AssumeRole
+  HVaultOption3RoleNameSpace2:
+    Type: AWS::IAM::Role
+    Condition: IsConsumer2Available
+    Properties:
+      RoleName: !Sub
+        - ${role_prefix}_${namespace}
+        - role_prefix: !Ref VaultOption3RolePrefix
+          namespace: !Ref VaultConsumerNamespace2
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${consumer_account}:root
+                - consumer_account: !Ref VaultAWSAccountID2
+            Action:
+              - sts:AssumeRole
 
 Outputs:
-  HVaultECSService:
-    Value: !Ref 'HVaultECSService'
-  HVaultECSCluster:
-    Value: !Ref 'HVaultECSCluster'
   HVaultECSEndpoint:
     Description: Your ALB DNS URL
-    Value: !Join ['', [!GetAtt [HVaultALB, DNSName]]]
-  HVaultECSTaskDefinition:
-    Value: !Ref 'HVaultECSTask'
+    Value: !Join ['', ['https://',!GetAtt HVaultALB.DNSName]]
+    Export:
+      Name: !Sub "${AWS::StackName}-endpoint"
+  HVaultOption3RoleConsumer1:
+    Condition: IsConsumer1Available
+    Description: Vault Option 3 Consumer 1 Role ARN
+    Value: !GetAtt HVaultOption3RoleNameSpace1.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-option3-role1-arn"
+  HVaultOption3RoleConsumer2:
+    Condition: IsConsumer2Available
+    Description: Vault Option 3 Consumer 2 Role ARN
+    Value: !GetAtt HVaultOption3RoleNameSpace2.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-option3-role2-arn"
+  HVaultRootToken:
+    Description: RootToken Key
+    Value: !Ref HVaultRootKey

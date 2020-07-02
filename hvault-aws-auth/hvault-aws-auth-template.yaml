@@ -11,7 +11,7 @@ Parameters:
   VaultAddr:
     Description: Please provide the Vault endpoint
     Type: String
-    Default: https://vault-hostname:8200
+    Default: http://hvault-svc-local:8200
   VaultNamespace:
     Description: Please provide the Vault Namespace
     Type: String
@@ -89,7 +89,7 @@ Resources:
   HVaultAccessFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: hvault-aws-auth/
+      CodeUri: src/
       Handler: app.lambda_handler
       Runtime: python3.8
       Environment:

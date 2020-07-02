@@ -1,0 +1,60 @@
+#################################################################
+#Stage 1 Input Params for Creating Vault. This step
+#is optional if a Vault already exists
+
+#Defaults. Change if necessary
+VAULT_SECRETS_STORE_NUMBER=10
+VAULT_SECRETS_THRESHOLD_NUMBER=3
+VAULT_RECOVERY_STORE_NUMBER=10
+VAULT_RECOVERY_THRESHOLD_NUMBER=3
+VAULT_DOCKER_IMAGE_TAG=library/vault:latest
+VAULT_ECS_DESIRED_CAP=2
+VAULT_ECS_MAX_CAP=6
+VAULT_DYNAMO_HA_ENABLED=true
+VAULT_SERVICE_OPTION3_ROLE_PREFIX=Vault_Role_Opt3_
+VAULT_SERVICE_PROFILE=default
+
+
+#Mandatory
+VAULT_SERVICE_AWS_ACCOUNTID=
+VAULT_CLIENT_DOCKER_IMAGE_TAG=
+VAULT_KMS_ADMIN_ARN=
+VAULT_CERTIFICATE_ARN=
+VAULT_VPC_ID=
+VAULT_ECS_SUBNETS=
+VAULT_ALB_SUBNETS=
+
+
+#Optional
+VAULT_ENTERPRISE_LICENSE_FILE=
+
+#Values for 2 consumers - Fill them up if you are deploying the Stage 2 as well
+VAULT_CONSUMER_AWS_PROFILE_1=
+VAULT_CONSUMER_AWS_ACCOUNT_ID_1=
+VAULT_CONSUMER_NAMESPACE_1=
+
+VAULT_CONSUMER_AWS_PROFILE_2=
+VAULT_CONSUMER_AWS_ACCOUNT_ID_2=
+VAULT_CONSUMER_NAMESPACE_2=
+
+
+#################################################################
+#Stage 2 Inout Params for creating Vault Auth Access Lambda Program
+
+#Mandatory - filled up automatically from Stage 1
+VAULT_SERVICE_URL=
+
+#Optional - filled up automatically from Stage 3
+VAULT_CONSUMER_ROLE_ARN_1=
+VAULT_CONSUMER_ROLE_ARN_2=
+
+
+#################################################################
+# Stage 3 Input Params for setting up Vault
+
+#Mandatory
+VAULT_SERVICE_TOKEN_SECRET_ARN=
+VAULT_CONSUMER_OPT1_ROLE_ARN_1=
+VAULT_CONSUMER_OPT1_ROLE_ARN_2=
+#################################################################
+

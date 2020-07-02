@@ -14,12 +14,30 @@ do
       echo "{\"secret_shares\": $VAULT_SECRETS_S,\"secret_threshold\": $VAULT_SECRETS_T, \"recovery_shares\": $VAULT_RECOVERY_S, \"recovery_threshold\": $VAULT_RECOVERY_T }"> /tmp/http_init_post.json
       http_init=`curl -k -s -w '%{http_code}' --location --request PUT -o /tmp/http_init.out $VAULT_ADDR/v1/sys/init --header 'Content-Type: application/json' -d  @/tmp/http_init_post.json`
       if [[ $http_init == '200' ]]; then
+        if [ -z "$PRINT_TOKENS" ]
+        then
+          echo
+        else
+          echo "######### Remove in production ##################"
+          echo
+          echo "Root Token"
+          cat /tmp/http_init.out | jq --raw-output '."root_token"'
+          echo
+          echo
+          echo "Recovery Keys"
+          cat /tmp/http_init.out | jq --raw-output '."recovery_keys_base64"[]'
+          echo
+          echo
+          echo "######### Remove in production ##################"
+        fi
         root_token=`cat /tmp/http_init.out | jq ".root_token"`
         recovery_keys=`cat /tmp/http_init.out | jq ".recovery_keys_base64"| sed 's/"/\\"/g'`
         echo 'Store super secret keys in AWS Secret Manager'
         aws secretsmanager update-secret --secret-id $AWS_SM_ROOT_TOKEN --secret-string "{\"root_token\":$root_token}"
         aws secretsmanager update-secret --secret-id $AWS_SM_RECOVERY_KEYS --secret-string "{\"recovery_keys\":$recovery_keys}"
         echo 'Completed Initialization.'
+        echo 'Destroying stored files'
+        rm -rf /tmp/http*
       else
         echo  'Failed Initialization. Try manually'
       fi

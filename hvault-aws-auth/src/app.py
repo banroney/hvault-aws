@@ -22,7 +22,7 @@ def aws_session(role_arn=None, session_name='my_session'):
 
 
 def lambda_handler(event, context):
-    vault_addr = 'https://' + os.environ["VAULT_ADDR"]
+    vault_addr = os.environ["VAULT_ADDR"]
     vault_region = os.environ['VAULT_AWS_REGION']
     vault_namespace = os.getenv('VAULT_NAMESPACE')
     vault_kv_mount = os.getenv('VAULT_KV_MOUNT')

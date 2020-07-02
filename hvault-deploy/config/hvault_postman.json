@@ -30,8 +30,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/sys/namespaces/{{namespace}}",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/sys/namespaces/{{namespace}}",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -72,8 +72,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/sys/mounts/kv",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/sys/mounts/kv",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -108,8 +108,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/sys/auth/aws",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/sys/auth/aws",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -150,8 +150,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/kv/data/opt12",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/kv/data/opt12",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -186,8 +186,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/kv/data/opt3",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/kv/data/opt3",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -222,8 +222,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/sys/policy/opt12",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/sys/policy/opt12",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -258,8 +258,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/sys/policy/opt3",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/sys/policy/opt3",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -307,8 +307,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{vault_url}}/v1/sys/license",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/sys/license",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -352,8 +352,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/auth/aws/config/sts/{{trust_accountid}}",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/auth/aws/config/sts/{{trust_accountid}}",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -393,8 +393,8 @@
 							}
 						],
 						"url": {
-							"raw": "https://{{vault_url}}/v1/auth/aws/config/sts/{{trust_accountid}}",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/auth/aws/config/sts/{{trust_accountid}}",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -441,8 +441,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt12",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt12",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -469,8 +469,8 @@
 							}
 						],
 						"url": {
-							"raw": "https://{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt12",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt12",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -504,8 +504,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt3",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt3",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -532,8 +532,8 @@
 							}
 						],
 						"url": {
-							"raw": "https://{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt3",
-							"protocol": "https",
+							"raw": "{{vault_url}}/v1/auth/aws/role/{{vault_role_prefix}}_opt3",
+							
 							"host": [
 								"{{vault_url}}"
 							],
@@ -621,19 +621,19 @@
 		{
 			"id": "a435036b-5176-45e9-bc29-1e655a575a33",
 			"key": "trust_accountid",
-			"value": "$VAULT_CONSUMER_AWS_ACCOUNTID",
+			"value": "$VAULT_CONSUMER_AWS_ACCOUNT_ID",
 			"type": "string"
 		},
 		{
 			"id": "7c9fd632-4383-4366-b82f-52314ca3ef1e",
 			"key": "consumer_role_arn",
-			"value": "$VAULT_CONSUMER_ROLE_ARN",
+			"value": "$VAULT_CONSUMER_OPT1_ROLE_ARN",
 			"type": "string"
 		},
 		{
 			"id": "9b2b0ba8-179b-46db-8d14-21f3392413b9",
 			"key": "local_role_arn",
-			"value": "$VAULT_SERVICE_OPTION3_ROLE_ARN",
+			"value": "$VAULT_CONSUMER_ROLE_ARN",
 			"type": "string"
 		},
 		{
