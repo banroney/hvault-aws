@@ -18,7 +18,11 @@ source hvault-deploy/hvault_common.sh \
   VAULT_SERVICE_OPTION3_ROLE_PREFIX \
   VAULT_SERVICE_PROFILE
 
+
 template_file=`ls $PWD/hvault-svc/hvault-svc-template.yaml`
+
+
+
 
 if [ -e $template_file ]
   then

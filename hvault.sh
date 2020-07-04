@@ -6,7 +6,7 @@ where:
     -h  show this help text
     -d  deploy options, available options are svc auth secret config
     -s  check status for stack, provide stack name"
-
+input_file=./hvault-deploy/local-data/val.env
 
 while getopts ':hd:s:' option; do
   case "$option" in
@@ -19,12 +19,14 @@ while getopts ':hd:s:' option; do
              source hvault-deploy/hvault_"$part"_deploy.sh "$@"
              ;;
         auth|config) echo "Deploying Hashicorp $part in AWS ..."
-             if [[ -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_1" ]]
+             source $input_file
+             echo $VAULT_CONSUMER_AWS_ACCOUNT_ID_1
+             if [[ ! -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_1" ]]
              then
                echo here now
                source hvault-deploy/hvault_"$part"_deploy.sh 1
              fi
-             if [[ -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_2" ]]
+             if [[ ! -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_2" ]]
              then
                source hvault-deploy/hvault_"$part"_deploy.sh 2
              fi
@@ -36,14 +38,15 @@ while getopts ':hd:s:' option; do
                                                          HVaultOption3RoleConsumer1:VAULT_CONSUMER_ROLE_ARN_1 \
                                                          HVaultOption3RoleConsumer2:VAULT_CONSUMER_ROLE_ARN_2 \
                                                          HVaultRootToken:VAULT_SERVICE_TOKEN_SECRET_ARN
-             if [[ -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_1" ]]
+             source $input_file
+             if [[ ! -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_1" ]]
              then
               source hvault-deploy/hvault_auth_deploy.sh 1
               source hvault-deploy/hvault-stack-status.sh $VAULT_CONSUMER_AWS_PROFILE_1 hvault-auth \
                                                          HVaultAccessFunctionIamRole:VAULT_OPT1_CONSUMER_ROLE_ARN_1
               source hvault-deploy/hvault_config_deploy.sh 1
              fi
-             if [[ -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_2" ]]
+             if [[ ! -z "$VAULT_CONSUMER_AWS_ACCOUNT_ID_2" ]]
              then
               source hvault-deploy/hvault_auth_deploy.sh 2
               source hvault-deploy/hvault-stack-status.sh $VAULT_CONSUMER_AWS_PROFILE_2 hvault-auth \
