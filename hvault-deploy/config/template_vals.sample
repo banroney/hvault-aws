@@ -26,7 +26,7 @@ VAULT_ALB_SUBNETS=
 
 
 #Optional
-VAULT_ENTERPRISE_LICENSE_FILE=
+VAULT_ENTERPRISE_LICENSE_TEXT=
 
 #Values for 2 consumers - Fill them up if you are deploying the Stage 2 as well
 VAULT_CONSUMER_AWS_PROFILE_1=

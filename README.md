@@ -252,7 +252,7 @@ AssumeRolePolicyDocument:
             Principal:
               AWS: !Sub
                 - arn:aws:iam::<consumer 1 account id>:root
-		- arn:aws:iam::<consumer 1 account id>:root
+                  arn:aws:iam::<consumer 1 account id>:root
             Action:
               - sts:AssumeRole
 ```
@@ -303,44 +303,14 @@ The following example demonstrates a Lambda function using 3 different accounts 
 The following steps are done for a macOS 10.13 or later. Please do the equivalent installs if you need to replicate on 
 Windows or Linux. It uses AWS CloudFormation for SAM to deploy the above architecture
 
-**Vault installation**
-This document assumes that Vault 0.12 or higher is already installed in an AWS account. However ,if it is't you can use the Terraform tempate as in [Link](https://github.com/hashicorp/terraform-aws-vault) to install Vault. The policy that is used for Vault installation is a combined policy as shown here
-
-```json5
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "VisualEditor0",
-            "Effect": "Allow",
-            "Action": "iam:GetRole",
-            "Resource": "arn:aws:iam::<your vault account id>:role/Vault*"
-        },
-        {
-            "Sid": "VisualEditor1",
-            "Effect": "Allow",
-            "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::*:role/HVault*",
-            "Condition": {
-                "StringEquals": {
-                    "aws:ResourceTag/vault-access": "<your vault acccount id>"
-                }
-            }
-        }
-    ]
-}
-```
-
-**Install the following tools** 
+**Prerequisites** 
 The following method shows installation using HomeBrew. However, other tools like macports or direct
 downloads can also be used. The following tools are needed
  - AWS CLI
  - AWS SAM CLI
  - Docker
  - Git
- - An Installed Hashicorp Vault Enterprise Version 0.12 or above
  - Postman or newman CLI for postman (for quick configuration of Vault)
-
 ```commandline
 brew tap aws/tap
 brew install docker aws-cli aws-sam-cli git
@@ -358,48 +328,82 @@ Default region name [None]:
 Default output format [None]: 
 ```
 
-
 **Checkout Git repo**
 ```commandline
 git clone https://github.com/banroney/hvault-aws.git
 ```
 
-### 1.6.1 SAM Build,Package and Deploy - Deployment script 
+### 1.6.1 Build,Package and Deploy - Deployment script 
 
-***Do the following step for 2 AWS accounts, one for each namespace*** 
-
-Just run the following which will in-turn build the project.
-Make sure you fill up all the values in `hvault-setup/template_vals.env` file. A sample would look like this
+You can install Vault 0.14 following the next steps. The command `hvault.sh` can run in 2 modes
+1. -d: Deploy. This mode takes 5 options - `svc`, `auth`, `secret`,`config`, `all`. 
+    a. `svc` - This option deploys an ECS powered Hashicorp Vault on AWS
+    b. `auth` - This option deploys two consumers powered by Lambda and connects to an existing Hashicorp server. Running
+    `all` automatically populates all values like Vaulr URL, token for the subsequent stages. 
+    c. `secret` - This option deploys a Lambda powered secret sync which connects to an existing Hashicorp Vault. 
+    d. `config` - This option runs a local script to configure Vault with some sample values demonstrating `auth` and 
+    `secret`.
+    
+The generated configuration file will still need these values to be populated as mandatory or optional
 
 ```
-#Vault Consumer constants
-VAULT_CONSUMER_AWS_PROFILE=profile1
-VAULT_CONSUMER_AWS_ACCOUNTID=xxxxxxxxxxx
-VAULT_CONSUMER_AWS_REGION=us-east-1
-VAULT_CONSUMER_AWS_BUCKET=hvault-aws-xxxxxxxxxx
-VAULT_CONSUMER_NAMESPACE=namespace2
-VAULT_CONSUMER_ROLE_ARN=arn:aws:iam::xxxxxxxxxxx:role/HVaultOpt12Role
+#Mandatory - These are mandatory and needs to be populated for all stages
+VAULT_SERVICE_AWS_ACCOUNTID=
+VAULT_CLIENT_DOCKER_IMAGE_TAG=
+VAULT_KMS_ADMIN_ARN=
+VAULT_CERTIFICATE_ARN=
+VAULT_VPC_ID=
+VAULT_ECS_SUBNETS=
+VAULT_ALB_SUBNETS=
 
-#Vault Server constants
-VAULT_SERVICE_AWS_ACCOUNTID=xxxxxxxxxxxx
-VAULT_SERVICE_URL=vaultserver.com:8200
-VAULT_SERVICE_TOKEN=xxxxxxxxxxxxxxxxxxx
-VAULT_SERVICE_OPTION3_ROLE_ARN=arn:aws:iam::xxxxxxxxxxxxx:role/VaultRole_Opt3
+
+#Optional - These are optional and if filled will progress to stage 2,3 and 4.
+VAULT_ENTERPRISE_LICENSE_TEXT=
+
+#Values for 2 consumers - Fill them up if you are deploying the Stage 2 as well
+VAULT_CONSUMER_AWS_PROFILE_1=
+VAULT_CONSUMER_AWS_ACCOUNT_ID_1=
+VAULT_CONSUMER_NAMESPACE_1=
+
+VAULT_CONSUMER_AWS_PROFILE_2=
+VAULT_CONSUMER_AWS_ACCOUNT_ID_2=
+VAULT_CONSUMER_NAMESPACE_2=
+
 ```
-Then run this:
+
+Example modes that `hvault.sh` can be run
+
+Run all stages or deployments. 
 ```commandline
 export PROJECT_ROOT=<your git cloned folder>
-./hvault-setup/hvault_deploy.sh
+./hvault.sh -d all
+```
+
+Deploy Vault only 
+```commandline
+./hvault.sh -d svc
+```
+
+Deploy Authentication Module only
+```commandline
+./hvault.sh -d auth
+```
+
+Check deployment status for each stack
+```commandline
+./hvault.sh -s <aws-profile> <stack-name> <replacement values>
+```
+An example usage of the check status
+```commandline
+./hvault.sh -s default hvault-svc HVaultECSendpoint:VAULT_SERVICE_URL
 ```
 
 ### 1.6.2 Configure Vault
-
-Run this:
-
+Deploy Config Module only
 ```commandline
-export PROJECT_ROOT=<your git cloned folder>
-./hvault-setup/hvault_setup.sh
+./hvault.sh -d config
 ```
+
 
 ### 1.6.3 Testing and Verifying various options
 Follow the steps to test the lambda functions in your AWS accounts

@@ -17,16 +17,47 @@ cd $PROJECT_ROOT
 if [ -e $input_file ]
 then
     echo "Input file exists, continuing setup..."
-    source $input_file
+
 else
-    echo Input File doesnt exist. Creating input file "$input_file". Please fill it up
+    echo Input File doesnt exist. Creating input file "$input_file". Please provide the following mandatory
     mkdir -p `dirname "$input_file"` && cp $input_template $input_file
-    chmod +x $input_file
-    exit
+
+    # Filling up mandatory values
+    read -p "VAULT_SERVICE_AWS_ACCOUNTID : " a_VAULT_SERVICE_AWS_ACCOUNTID
+    read -p "VAULT_CLIENT_DOCKER_IMAGE_TAG : " a_VAULT_CLIENT_DOCKER_IMAGE_TAG
+    read -p "VAULT_KMS_ADMIN_ARN : " a_VAULT_KMS_ADMIN_ARN
+    read -p "VAULT_CERTIFICATE_ARN : " a_VAULT_CERTIFICATE_ARN
+    read -p "VAULT_VPC_ID : " a_VAULT_VPC_ID
+    read -p "VAULT_ECS_SUBNETS : " a_VAULT_ECS_SUBNETS
+    read -p "VAULT_ALB_SUBNETS : " a_VAULT_ALB_SUBNETS
+    echo
+    echo Fill up the following for Stage 2,3 and 4
+    read -p "VAULT_CONSUMER_AWS_PROFILE_1 : " a_VAULT_CONSUMER_AWS_PROFILE_1
+    read -p "VAULT_CONSUMER_AWS_ACCOUNT_ID_1 : " a_VAULT_CONSUMER_AWS_ACCOUNT_ID_1
+    read -p "VAULT_CONSUMER_NAMESPACE_1 : " a_VAULT_CONSUMER_NAMESPACE_1
+    read -p "VAULT_CONSUMER_AWS_PROFILE_2 : " a_VAULT_CONSUMER_AWS_PROFILE_2
+    read -p "VAULT_CONSUMER_AWS_ACCOUNT_ID_2 : " a_VAULT_CONSUMER_AWS_ACCOUNT_ID_2
+    read -p "VAULT_CONSUMER_NAMESPACE_2 : " a_VAULT_CONSUMER_NAMESPACE_2
+
+    sed -i -n -e "s,^\(VAULT_SERVICE_AWS_ACCOUNTID\)\(=\)\(.*\),\1\2${a_VAULT_SERVICE_AWS_ACCOUNTID},g;
+               s,^\(VAULT_CLIENT_DOCKER_IMAGE_TAG\)\(=\)\(.*\),\1\2${a_VAULT_CLIENT_DOCKER_IMAGE_TAG},g;
+               s,^\(VAULT_KMS_ADMIN_ARN\)\(=\)\(.*\),\1\2${a_VAULT_KMS_ADMIN_ARN},g;
+               s,^\(VAULT_CERTIFICATE_ARN\)\(=\)\(.*\),\1\2${a_VAULT_CERTIFICATE_ARN},g;
+               s,^\(VAULT_VPC_ID\)\(=\)\(.*\),\1\2${a_VAULT_VPC_ID},g;
+               s,^\(VAULT_ECS_SUBNETS\)\(=\)\(.*\),\1\2${a_VAULT_ECS_SUBNETS},g;
+               s,^\(VAULT_ALB_SUBNETS\)\(=\)\(.*\),\1\2${a_VAULT_ALB_SUBNETS},g;
+               s,^\(VAULT_CONSUMER_AWS_PROFILE_1\)\(=\)\(.*\),\1\2${a_VAULT_CONSUMER_AWS_PROFILE_1},g;
+               s,^\(VAULT_CONSUMER_AWS_ACCOUNT_ID_1\)\(=\)\(.*\),\1\2${a_VAULT_CONSUMER_AWS_ACCOUNT_ID_1},g;
+               s,^\(VAULT_CONSUMER_NAMESPACE_1\)\(=\)\(.*\),\1\2${a_VAULT_CONSUMER_NAMESPACE_1},g;
+               s,^\(VAULT_CONSUMER_AWS_PROFILE_2\)\(=\)\(.*\),\1\2${a_VAULT_CONSUMER_AWS_PROFILE_2},g;
+               s,^\(VAULT_CONSUMER_AWS_ACCOUNT_ID_2\)\(=\)\(.*\),\1\2${a_VAULT_CONSUMER_AWS_ACCOUNT_ID_2},g;
+               s,^\(VAULT_CONSUMER_NAMESPACE_2\)\(=\)\(.*\),\1\2${a_VAULT_CONSUMER_NAMESPACE_2},g" \
+           $input_file
 fi
 
 # Check all mandatory parameters and exit if not set
-
+chmod +x $input_file
+source $input_file
 should_exit=0
 echo
 echo ++++++++++++++++++++++++++++++++++++++
@@ -35,11 +66,9 @@ for var in "$@"
 do
   if [ -z ${!var} ]
   then
-      #printf "|\t%s\t|\t%s\t|\n" "'\xE2\x9D\x8C' $var" "EMPTY"
       echo -e "\xE2\x9D\x8C $var is mandatory"
       should_exit=1
   else
-    #printf "|\t%s\t|\t%s\t|\n" "'\xE2\x9C\x94' $var" "${!var}"
     echo -e "\xE2\x9C\x94 $var = ${!var}"
   fi
 done
